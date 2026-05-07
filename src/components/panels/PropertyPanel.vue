@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useEditorStore } from '../../stores/editorStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useSimulationStore } from '../../stores/simulationStore';
@@ -8,6 +8,17 @@ import RoutingTable from './RoutingTable.vue';
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
+}
+
+const flashFields = ref<Record<string, boolean>>({});
+
+function clampWithFlash(field: string, v: number, min: number, max: number): number {
+  const clamped = clamp(v, min, max);
+  if (clamped !== v) {
+    flashFields.value[field] = true;
+    setTimeout(() => { delete flashFields.value[field]; }, 600);
+  }
+  return clamped;
 }
 
 const editorStore = useEditorStore();
@@ -76,7 +87,11 @@ function deleteComponent(): void {
     <p v-if="simStore.status !== 'idle' || simStore.multiRunTotal > 0" class="locked">仿真运行中，编辑已锁定</p>
 
     <!-- 未选中 -->
-    <p v-else-if="selection.kind === null" class="placeholder">选择组件以编辑属性</p>
+    <p v-else-if="selection.kind === null" class="placeholder">
+      {{ Object.keys(canvasStore.conveyors).length + Object.keys(canvasStore.transferMachines).length + Object.keys(canvasStore.forklifts).length === 0
+        ? '从左侧工具栏拖入组件到画布'
+        : '点击画布中的组件查看属性' }}
+    </p>
 
     <!-- 输送机属性 -->
     <div v-if="selection.kind === 'conveyor' && conveyorData" class="form">
@@ -87,24 +102,27 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="conveyorData.length"
+        :class="{ 'input-flash': flashFields['conv-length'] }"
         min="0.5" max="100" step="0.5"
-        @change="updateConveyor({ length: clamp(+($event.target as HTMLInputElement).value, 0.5, 100) })"
+        @change="updateConveyor({ length: clampWithFlash('conv-length', +($event.target as HTMLInputElement).value, 0.5, 100) })"
       />
 
       <label>宽度 (米)</label>
       <input
         type="number"
         :value="conveyorData.width"
+        :class="{ 'input-flash': flashFields['conv-width'] }"
         min="0.2" max="5" step="0.1"
-        @change="updateConveyor({ width: clamp(+($event.target as HTMLInputElement).value, 0.2, 5) })"
+        @change="updateConveyor({ width: clampWithFlash('conv-width', +($event.target as HTMLInputElement).value, 0.2, 5) })"
       />
 
       <label>速度 (米/秒)</label>
       <input
         type="number"
         :value="conveyorData.speed"
+        :class="{ 'input-flash': flashFields['conv-speed'] }"
         min="0.1" max="10" step="0.1"
-        @change="updateConveyor({ speed: clamp(+($event.target as HTMLInputElement).value, 0.1, 10) })"
+        @change="updateConveyor({ speed: clampWithFlash('conv-speed', +($event.target as HTMLInputElement).value, 0.1, 10) })"
       />
 
       <label>方向</label>
@@ -120,8 +138,9 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="conveyorData.zoneSpacing"
+        :class="{ 'input-flash': flashFields['conv-zonespace'] }"
         min="0.5" :max="conveyorData.length" step="0.1"
-        @change="updateConveyor({ zoneSpacing: clamp(+($event.target as HTMLInputElement).value, 0.5, conveyorData.length) })"
+        @change="updateConveyor({ zoneSpacing: clampWithFlash('conv-zonespace', +($event.target as HTMLInputElement).value, 0.5, conveyorData.length) })"
       />
     </div>
 
@@ -131,8 +150,9 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="transferData.actionTime"
+        :class="{ 'input-flash': flashFields['trans-time'] }"
         min="0.5" max="60" step="0.5"
-        @change="updateTransfer({ actionTime: clamp(+($event.target as HTMLInputElement).value, 0.5, 60) })"
+        @change="updateTransfer({ actionTime: clampWithFlash('trans-time', +($event.target as HTMLInputElement).value, 0.5, 60) })"
       />
 
       <label>默认路由</label>
@@ -168,8 +188,9 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="forkliftData.interval"
+        :class="{ 'input-flash': flashFields['fork-interval'] }"
         min="1" max="3600" step="1"
-        @change="updateForklift({ interval: clamp(+($event.target as HTMLInputElement).value, 1, 3600) })"
+        @change="updateForklift({ interval: clampWithFlash('fork-interval', +($event.target as HTMLInputElement).value, 1, 3600) })"
       />
 
       <label>波动范围</label>
@@ -223,29 +244,29 @@ function deleteComponent(): void {
 <style scoped>
 .property-panel {
   padding: 12px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .panel-title {
   font-weight: 600;
   font-size: 12px;
-  color: #e94560;
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
   padding-bottom: 8px;
 }
 
 .placeholder {
-  color: #666;
+  color: var(--color-fg-dim);
   font-size: 13px;
 }
 
 .locked {
-  color: #e94560;
+  color: var(--color-primary);
   font-size: 13px;
   padding: 8px;
-  background: #2a1010;
-  border: 1px solid #4a2020;
+  background: var(--color-locked-bg);
+  border: 1px solid var(--color-locked-border);
   border-radius: 4px;
   text-align: center;
 }
@@ -258,27 +279,37 @@ function deleteComponent(): void {
 
 label {
   font-size: 11px;
-  color: #888;
+  color: var(--color-fg-muted);
   margin-top: 8px;
 }
 
 input, select {
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   padding: 4px 8px;
   font-size: 13px;
 }
 
 input:focus, select:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--color-primary);
+}
+
+.input-flash {
+  border-color: var(--color-primary) !important;
+  animation: flash-border 0.6s ease-out;
+}
+
+@keyframes flash-border {
+  0% { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.3); }
+  100% { border-color: var(--color-border); box-shadow: none; }
 }
 
 .readonly {
   font-size: 13px;
-  color: #aaa;
+  color: var(--color-fg-secondary);
   padding: 4px 0;
 }
 
@@ -286,14 +317,14 @@ input:focus, select:focus {
   margin-top: 16px;
   width: 100%;
   padding: 6px;
-  background: #3a1010;
-  border: 1px solid #6a2020;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
   border-radius: 4px;
-  color: #e06060;
+  color: var(--color-danger-fg);
   font-size: 13px;
 }
 
 .btn-delete:hover {
-  background: #5a2020;
+  background: var(--color-danger-hover);
 }
 </style>

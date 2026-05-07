@@ -82,7 +82,7 @@ function exportReport(): void {
   <div class="data-panel">
     <div class="panel-title">仿真数据</div>
 
-    <div v-if="!hasData" class="placeholder">运行仿真以查看数据</div>
+    <div v-if="!hasData" class="placeholder">运行仿真后将在此处查看<br>吞吐量、利用率、停留时间等分析数据</div>
 
     <div v-else class="stats">
       <!-- 瓶颈提示 -->
@@ -177,37 +177,37 @@ function exportReport(): void {
 .panel-title {
   font-weight: 600;
   font-size: 12px;
-  color: #e94560;
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
   padding-bottom: 8px;
 }
 
-.placeholder { color: #666; font-size: 13px; }
+.placeholder { color: var(--color-fg-dim); font-size: 13px; }
 
 .stats { display: flex; flex-direction: column; gap: 6px; }
 
 .bottleneck-banner {
-  background: #4a1020;
-  border: 1px solid #e94560;
+  background: var(--color-bottleneck-bg);
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   padding: 6px 8px;
-  color: #e94560;
+  color: var(--color-primary);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
 }
 
 .stat-row { display: flex; justify-content: space-between; font-size: 13px; }
-.stat-label { color: #888; }
-.stat-value { color: #e0e0e0; font-weight: 600; }
+.stat-label { color: var(--color-fg-muted); }
+.stat-value { color: var(--color-fg-primary); font-weight: 600; }
 
 .section { margin-top: 4px; }
 .section-title {
   font-size: 11px;
-  color: #888;
+  color: var(--color-fg-muted);
   padding-bottom: 4px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 4px;
 }
 
@@ -217,9 +217,9 @@ function exportReport(): void {
   padding: 2px 0;
   gap: 4px;
 }
-.dwell-label { color: #aaa; flex: 1; }
-.dwell-val { color: #e0e0e0; }
-.dwell-max { color: #666; font-size: 11px; }
+.dwell-label { color: var(--color-fg-secondary); flex: 1; }
+.dwell-val { color: var(--color-fg-primary); }
+.dwell-max { color: var(--color-fg-dim); font-size: 11px; }
 
 .event-row {
   display: flex;
@@ -227,32 +227,32 @@ function exportReport(): void {
   padding: 1px 0;
   gap: 4px;
 }
-.event-label { color: #e9a820; flex: 1; }
-.event-time { color: #888; }
-.event-dur { color: #e94560; }
+.event-label { color: var(--color-warning); flex: 1; }
+.event-time { color: var(--color-fg-muted); }
+.event-dur { color: var(--color-primary); }
 
 .util-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-.util-label { color: #aaa; min-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.util-label.bottleneck { color: #e94560; font-weight: 600; }
-.util-bar-bg { flex: 1; height: 8px; background: #1a1a2e; border-radius: 4px; overflow: hidden; }
+.util-label { color: var(--color-fg-secondary); min-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.util-label.bottleneck { color: var(--color-primary); font-weight: 600; }
+.util-bar-bg { flex: 1; height: 8px; background: var(--color-bg-base); border-radius: 4px; overflow: hidden; }
 .util-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-.util-bar-fill.green { background: #00c850; }
-.util-bar-fill.yellow { background: #e9a820; }
-.util-bar-fill.red { background: #e94560; }
-.util-pct { color: #888; min-width: 30px; text-align: right; }
+.util-bar-fill.green { background: var(--color-green); }
+.util-bar-fill.yellow { background: var(--color-warning); }
+.util-bar-fill.red { background: var(--color-primary); }
+.util-pct { color: var(--color-fg-muted); min-width: 30px; text-align: right; }
 
 .btn-export {
   margin-top: 12px;
   width: 100%;
   padding: 6px;
-  background: #1a3a5a;
-  border: 1px solid #0f3460;
+  background: var(--color-btn-confirm-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   font-size: 12px;
   cursor: pointer;
 }
-.stat-value.green { color: #00c850; }
-.stat-value.red { color: #e94560; }
-.btn-export:hover { background: #2a4a6a; }
+.stat-value.green { color: var(--color-green); }
+.stat-value.red { color: var(--color-primary); }
+.btn-export:hover { background: var(--color-btn-confirm-hover); }
 </style>

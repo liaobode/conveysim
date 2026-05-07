@@ -4,14 +4,14 @@ import { useUIStore } from '../../stores/uiStore';
 const uiStore = useUIStore();
 
 const colorMap: Record<string, string> = {
-  error: '#e94560',
-  warn: '#e9a820',
-  info: '#4a8ae0',
+  error: 'var(--color-toast-error)',
+  warn: 'var(--color-toast-warn)',
+  info: 'var(--color-toast-info)',
 };
 </script>
 
 <template>
-  <div class="toast-container" v-if="uiStore.toasts.length > 0">
+  <TransitionGroup name="toast" tag="div" class="toast-container" v-if="uiStore.toasts.length > 0">
     <div
       v-for="t in uiStore.toasts"
       :key="t.id"
@@ -21,7 +21,7 @@ const colorMap: Record<string, string> = {
       {{ t.message }}
       <button class="toast-close" @click="uiStore.removeToast(t.id)">&times;</button>
     </div>
-  </div>
+  </TransitionGroup>
 </template>
 
 <style scoped>
@@ -38,29 +38,41 @@ const colorMap: Record<string, string> = {
 
 .toast-item {
   pointer-events: auto;
-  background: #16213e;
-  border: 1px solid #0f3460;
+  background: var(--color-toast-bg);
+  border: 1px solid var(--color-toast-border);
   border-left-width: 4px;
   border-radius: 4px;
   padding: 8px 12px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   font-size: 13px;
   max-width: 360px;
   display: flex;
   align-items: center;
   gap: 8px;
-  animation: slideIn 0.2s ease-out;
 }
 
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.toast-enter-active {
+  transition: all 0.2s ease-out;
+}
+.toast-leave-active {
+  transition: all 0.15s ease-in;
+}
+.toast-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.toast-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.toast-move {
+  transition: transform 0.15s ease;
 }
 
 .toast-close {
   background: none;
   border: none;
-  color: #888;
+  color: var(--color-fg-muted);
   font-size: 16px;
   cursor: pointer;
   padding: 0 2px;
@@ -68,6 +80,6 @@ const colorMap: Record<string, string> = {
 }
 
 .toast-close:hover {
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
 }
 </style>

@@ -14,6 +14,7 @@ interface UIState {
   saveDialogVisible: boolean;
   loadDialogVisible: boolean;
   batchDialogVisible: boolean;
+  shortcutPanelVisible: boolean;
   autoSaveTimestamp: number | null;
   toasts: ToastItem[];
 }
@@ -25,6 +26,7 @@ export const useUIStore = defineStore('ui', {
     saveDialogVisible: false,
     loadDialogVisible: false,
     batchDialogVisible: false,
+    shortcutPanelVisible: false,
     autoSaveTimestamp: null,
     toasts: [],
   }),

@@ -7,10 +7,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
-  color: #e0e0e0;
-  background: #1a1a2e;
+  color: var(--color-fg-primary);
+  background: var(--color-bg-base);
   overflow: hidden;
 }
 
@@ -26,4 +26,48 @@ input, select, button {
 
 button {
   cursor: pointer;
+}
+
+/* === 对话框过渡动画 === */
+.dialog-enter-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.dialog-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.dialog-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.dialog-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* === 全局 focus ring === */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* === 按钮微交互 === */
+button:not(:disabled):active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
+}
+
+/* === 禁用态对比度 === */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === prefers-reduced-motion === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

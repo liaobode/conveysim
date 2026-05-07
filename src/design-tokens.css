@@ -1,0 +1,96 @@
+/* ==========================================
+ * ConveySim Design Tokens
+ * 语义化 CSS 变量 — 所有颜色、间距、层级统一管理
+ * ========================================== */
+
+:root {
+  /* === 背景色 === */
+  --color-bg-canvas: #0a0a1a;       /* Canvas 画布背景 */
+  --color-bg-base: #1a1a2e;         /* 主背景 / body / 控件默认背景 */
+  --color-bg-surface: #16213e;      /* 面板 / header / footer 背景 */
+  --color-bg-hover: #1e1e3e;        /* 激活态 / hover 背景 */
+  --color-bg-input: #1a1a2e;        /* input / select 背景 */
+
+  /* === 边框色 === */
+  --color-border: #0f3460;           /* 默认边框 / 分隔线 */
+  --color-border-focus: #e94560;     /* 聚焦边框（与 primary 同色） */
+
+  /* === 品牌/语义色 === */
+  --color-primary: #e94560;          /* 品牌强调色：logo、标题、选中、错误 */
+  --color-warning: #e9a820;          /* 警告 / 速度高亮 */
+  --color-success: #4ae04a;          /* 运行中 / 畅通 */
+  --color-info: #4a8ae0;             /* 信息提示 */
+  --color-green: #00c850;            /* 利用率条绿色（低负载） */
+
+  /* === 前景/文字色 === */
+  --color-fg-primary: #e0e0e0;       /* 主要文字 */
+  --color-fg-secondary: #aaa;        /* 次要文字 */
+  --color-fg-muted: #888;            /* 辅助文字 / 标签 */
+  --color-fg-dim: #666;              /* 弱化文字 / 占位 */
+  --color-fg-dark: #555;             /* 极弱化文字 */
+  --color-fg-on-primary: #e0e0e0;    /* primary 背景上的文字 */
+
+  /* === 按钮色 === */
+  --color-btn-confirm-bg: #1a3a5a;   /* 确认/保存按钮背景 */
+  --color-btn-confirm-hover: #2a4a6a;/* 确认按钮 hover */
+  --color-btn-export-bg: #2a2a4a;   /* 导出按钮背景 */
+  --color-btn-export-hover: #3a3a5a;/* 导出按钮 hover */
+
+  /* === 危险/破坏操作 === */
+  --color-danger-bg: #3a1010;        /* 删除按钮背景 */
+  --color-danger-border: #6a2020;    /* 删除按钮边框 */
+  --color-danger-fg: #e06060;        /* 删除按钮文字 */
+  --color-danger-hover: #5a2020;     /* 删除按钮 hover */
+
+  /* === 特殊状态 === */
+  --color-locked-bg: #2a1010;        /* 编辑锁定背景 */
+  --color-locked-border: #4a2020;    /* 编辑锁定边框 */
+  --color-bottleneck-bg: #4a1020;    /* 瓶颈提示背景 */
+  --color-warn-bg: #4a2010;          /* 覆盖警告背景 */
+  --color-save-warn-bg: #5a3010;     /* 覆盖模式确认按钮背景 */
+
+  /* === 状态栏 === */
+  --color-status-running-bg: #1a2a1a;
+  --color-status-running-border: #2a4a2a;
+  --color-status-paused-bg: #2a2a1a;
+  --color-status-paused-border: #4a4a2a;
+
+  /* === 对话框 === */
+  --color-overlay: rgba(0, 0, 0, 0.6);   /* 对话框遮罩 */
+
+  /* === Toast === */
+  --color-toast-bg: #16213e;
+  --color-toast-border: #0f3460;
+  --color-toast-error: #e94560;      /* 错误 toast 左边框 */
+  --color-toast-warn: #e9a820;       /* 警告 toast 左边框 */
+  --color-toast-info: #4a8ae0;       /* 信息 toast 左边框 */
+
+  /* === 间距系统（4px 基数） === */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* === 圆角 === */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* === z-index 层级 === */
+  --z-canvas: 1;
+  --z-panel: 10;
+  --z-header: 20;
+  --z-dialog: 100;
+  --z-toast: 200;
+
+  /* === 过渡 === */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* === 字体 === */
+  --font-ui: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+}

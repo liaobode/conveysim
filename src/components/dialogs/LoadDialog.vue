@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { uploadJSON } from '../../utils/persistence';
+import { trapFocus } from '../../utils/focusTrap';
 
 const canvasStore = useCanvasStore();
 
 const emit = defineEmits<{
   close: [];
 }>();
+const dialogRef = ref<HTMLElement>();
 
 async function handleLoad(): Promise<void> {
   try {
@@ -20,8 +23,8 @@ async function handleLoad(): Promise<void> {
 </script>
 
 <template>
-  <div class="dialog-overlay" @click.self="emit('close')">
-    <div class="dialog">
+  <div class="dialog-overlay" @click.self="emit('close')" @keydown.escape="emit('close')">
+    <div ref="dialogRef" class="dialog" @keydown="(e: KeyboardEvent) => trapFocus(e, dialogRef!)">
       <h3>导入场景</h3>
       <p class="desc">选择之前导出的 .json 文件</p>
       <div class="dialog-actions">
@@ -36,7 +39,7 @@ async function handleLoad(): Promise<void> {
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,8 +47,8 @@ async function handleLoad(): Promise<void> {
 }
 
 .dialog {
-  background: #16213e;
-  border: 1px solid #0f3460;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
   min-width: 320px;
@@ -54,12 +57,12 @@ async function handleLoad(): Promise<void> {
 h3 {
   margin: 0 0 8px;
   font-size: 16px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
 }
 
 .desc {
   font-size: 13px;
-  color: #888;
+  color: var(--color-fg-muted);
   margin-bottom: 16px;
 }
 
@@ -70,22 +73,22 @@ h3 {
 }
 
 .btn-cancel {
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
-  color: #888;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  color: var(--color-fg-muted);
   padding: 6px 16px;
   border-radius: 4px;
 }
 
 .btn-load {
-  background: #1a3a5a;
-  border: 1px solid #0f3460;
-  color: #e0e0e0;
+  background: var(--color-btn-confirm-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-fg-primary);
   padding: 6px 16px;
   border-radius: 4px;
 }
 
 .btn-load:hover {
-  background: #2a4a6a;
+  background: var(--color-btn-confirm-hover);
 }
 </style>

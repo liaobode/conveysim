@@ -9,6 +9,7 @@ import DataPanel from './components/panels/DataPanel.vue';
 import SaveDialog from './components/dialogs/SaveDialog.vue';
 import LoadDialog from './components/dialogs/LoadDialog.vue';
 import BatchDialog from './components/dialogs/BatchDialog.vue';
+import ShortcutPanel from './components/dialogs/ShortcutPanel.vue';
 import StatusBar from './components/layout/StatusBar.vue';
 import SimToast from './components/layout/SimToast.vue';
 
@@ -37,15 +38,24 @@ function onBatchStart(rounds: number, timePerRound: number): void {
     <div class="app-body">
       <Toolbar ref="toolbarRef" />
       <CanvasContainer />
-      <aside class="right-panel">
+      <aside class="right-panel" role="complementary" aria-label="属性和数据面板">
         <PropertyPanel />
         <DataPanel />
       </aside>
     </div>
     <StatusBar />
-    <SaveDialog v-if="uiStore.saveDialogVisible" @close="onSaveClose" />
-    <LoadDialog v-if="uiStore.loadDialogVisible" @close="uiStore.closeLoadDialog()" />
-    <BatchDialog v-if="uiStore.batchDialogVisible" @close="uiStore.closeBatchDialog()" @start="onBatchStart" />
+    <Transition name="dialog">
+      <SaveDialog v-if="uiStore.saveDialogVisible" @close="onSaveClose" />
+    </Transition>
+    <Transition name="dialog">
+      <LoadDialog v-if="uiStore.loadDialogVisible" @close="uiStore.closeLoadDialog()" />
+    </Transition>
+    <Transition name="dialog">
+      <BatchDialog v-if="uiStore.batchDialogVisible" @close="uiStore.closeBatchDialog()" @start="onBatchStart" />
+    </Transition>
+    <Transition name="dialog">
+      <ShortcutPanel v-if="uiStore.shortcutPanelVisible" @close="uiStore.shortcutPanelVisible = false" />
+    </Transition>
     <SimToast />
   </div>
 </template>
@@ -66,8 +76,8 @@ function onBatchStart(rounds: number, timePerRound: number): void {
 
 .right-panel {
   width: 240px;
-  background: #16213e;
-  border-left: 1px solid #0f3460;
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
   flex-shrink: 0;
   overflow-y: auto;
   display: flex;

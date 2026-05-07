@@ -9,6 +9,7 @@ const canvasStore = useCanvasStore();
 const uiStore = useUIStore();
 
 const speedMenuOpen = ref(false);
+const speedHighlighted = ref(0);
 const speedOptions = [
   { label: '1x', value: 1, isMax: false },
   { label: '2x', value: 2, isMax: false },
@@ -20,6 +21,34 @@ const speedOptions = [
 
 function toggleSpeedMenu(): void {
   speedMenuOpen.value = !speedMenuOpen.value;
+  if (speedMenuOpen.value) initHighlighted();
+}
+
+function initHighlighted(): void {
+  const idx = speedOptions.findIndex((opt) =>
+    opt.isMax ? simStore.maxMode : (!simStore.maxMode && simStore.speedMultiplier === opt.value),
+  );
+  speedHighlighted.value = idx >= 0 ? idx : 0;
+}
+
+function onSpeedKeydown(e: KeyboardEvent): void {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!speedMenuOpen.value) {
+      speedMenuOpen.value = true;
+      initHighlighted();
+    } else {
+      speedHighlighted.value = e.key === 'ArrowDown'
+        ? (speedHighlighted.value + 1) % speedOptions.length
+        : (speedHighlighted.value - 1 + speedOptions.length) % speedOptions.length;
+    }
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    speedMenuOpen.value = !speedMenuOpen.value;
+    if (speedMenuOpen.value) initHighlighted();
+  } else if (e.key === 'Escape') {
+    speedMenuOpen.value = false;
+  }
 }
 
 function selectSpeed(opt: { label: string; value: number; isMax: boolean }): void {
@@ -91,6 +120,7 @@ function onBatchRun(): void {
 
 function onClear(): void {
   if (simStore.status !== 'idle') return;
+  if (!confirm('确定要清空画布吗？所有组件和数据将被清除。')) return;
   canvasStore.clear();
   simStore.clearData();
 }
@@ -132,7 +162,7 @@ function setupTestCircuit(): void {
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" role="banner" aria-label="主工具栏">
     <span class="logo">ConveySim</span>
     <div class="controls">
       <button class="btn" title="搭建测试回路" @click="setupTestCircuit">&#9881; 测试</button>
@@ -170,14 +200,18 @@ function setupTestCircuit(): void {
         @click="onStep"
       >&#9654;| 单步</button>
       <div class="speed-wrap" @click.stop>
-        <button class="btn speed-btn" title="选择仿真速度" @click="toggleSpeedMenu">{{ currentSpeedLabel() }}</button>
+        <button class="btn speed-btn" title="选择仿真速度" @click="toggleSpeedMenu" @keydown="onSpeedKeydown">{{ currentSpeedLabel() }}</button>
         <div v-if="speedMenuOpen" class="speed-dropdown" @click.stop>
           <div
-            v-for="opt in speedOptions"
+            v-for="(opt, i) in speedOptions"
             :key="opt.label"
             class="speed-option"
-            :class="{ active: opt.isMax ? simStore.maxMode : (!simStore.maxMode && simStore.speedMultiplier === opt.value) }"
+            :class="{
+              active: opt.isMax ? simStore.maxMode : (!simStore.maxMode && simStore.speedMultiplier === opt.value),
+              highlighted: i === speedHighlighted,
+            }"
             @click="selectSpeed(opt)"
+            @mouseenter="speedHighlighted = i"
           >{{ opt.label }}</div>
         </div>
       </div>
@@ -188,6 +222,8 @@ function setupTestCircuit(): void {
         title="批量自动运行"
         @click="onBatchRun"
       >&#9654;&#9654; 批量</button>
+      <span class="sep"></span>
+      <button class="btn" title="键盘快捷键 (?)" @click="uiStore.shortcutPanelVisible = true">?</button>
     </div>
   </header>
 </template>
@@ -199,15 +235,15 @@ function setupTestCircuit(): void {
   justify-content: space-between;
   height: 40px;
   padding: 0 12px;
-  background: #16213e;
-  border-bottom: 1px solid #0f3460;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .logo {
   font-weight: 700;
   font-size: 16px;
-  color: #e94560;
+  color: var(--color-primary);
 }
 
 .controls {
@@ -220,27 +256,27 @@ function setupTestCircuit(): void {
   height: 28px;
   padding: 0 8px;
   white-space: nowrap;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
 }
 
 .btn:disabled {
-  opacity: 0.3;
-  cursor: default;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn:not(:disabled):hover {
-  background: #0f3460;
+  background: var(--color-border);
 }
 
 .sep {
   width: 1px;
   height: 20px;
-  background: #0f3460;
+  background: var(--color-border);
   margin: 0 4px;
 }
 
@@ -252,21 +288,21 @@ function setupTestCircuit(): void {
   width: auto;
   padding: 0 6px;
   font-size: 12px;
-  color: #e9a820;
+  color: var(--color-warning);
   min-width: 36px;
   cursor: pointer;
 }
 
 .speed-btn:hover {
-  color: #e94560;
+  color: var(--color-primary);
 }
 
 .speed-dropdown {
   position: absolute;
   top: 32px;
   right: 0;
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
   z-index: 100;
@@ -276,18 +312,22 @@ function setupTestCircuit(): void {
 .speed-option {
   padding: 6px 14px;
   font-size: 12px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   cursor: pointer;
   text-align: center;
   white-space: nowrap;
 }
 
 .speed-option:hover {
-  background: #0f3460;
+  background: var(--color-border);
 }
 
 .speed-option.active {
-  color: #e94560;
-  background: #1a1030;
+  color: var(--color-primary);
+  background: #1a1030; /* unique active highlight — kept inline */
+}
+
+.speed-option.highlighted {
+  background: var(--color-border);
 }
 </style>

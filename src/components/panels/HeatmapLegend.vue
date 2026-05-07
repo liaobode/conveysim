@@ -26,9 +26,9 @@
 
 .section-title {
   font-size: 11px;
-  color: #888;
+  color: var(--color-fg-muted);
   padding-bottom: 4px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 6px;
 }
 
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #aaa;
+  color: var(--color-fg-secondary);
   padding: 2px 0;
 }
 
@@ -48,7 +48,7 @@
   flex-shrink: 0;
 }
 
-.swatch.green { background: #00c850; }
-.swatch.yellow { background: #e9a820; }
-.swatch.red { background: #e94560; }
+.swatch.green { background: var(--color-green); }
+.swatch.yellow { background: var(--color-warning); }
+.swatch.red { background: var(--color-primary); }
 </style>

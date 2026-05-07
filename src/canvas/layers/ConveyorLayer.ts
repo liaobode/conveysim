@@ -9,14 +9,16 @@ export class ConveyorLayer {
   private container: PIXI.Container;
   private graphics = new Map<string, ConveyorGraphic>();
   connectionLines: PIXI.Graphics;
+  portHighlight: PIXI.Graphics;
   private canvasStore = useCanvasStore();
   private editorStore = useEditorStore();
 
   constructor(parent: PIXI.Container) {
     this.container = new PIXI.Container();
     this.connectionLines = new PIXI.Graphics();
+    this.portHighlight = new PIXI.Graphics();
     parent.addChild(this.container);
-    // connectionLines 由 CanvasManager 在 ComponentLayer 之后添加
+    // connectionLines / portHighlight 由 CanvasManager 在 ComponentLayer 之后添加
   }
 
   sync(conveyors: ConveyorData[]): void {
@@ -98,5 +100,39 @@ export class ConveyorLayer {
 
   getGraphic(id: string): ConveyorGraphic | undefined {
     return this.graphics.get(id);
+  }
+
+  showPortHighlight(x: number, y: number): void {
+    this.portHighlight.clear();
+    this.portHighlight.lineStyle(2, 0x4ae04a, 0.9);
+    this.portHighlight.beginFill(0x4ae04a, 0.2);
+    this.portHighlight.drawCircle(x, y, 10);
+    this.portHighlight.endFill();
+  }
+
+  clearPortHighlight(): void {
+    this.portHighlight.clear();
+  }
+
+  /** 获取所有连接中可用的端口位置列表 */
+  getPortPositions(): { x: number; y: number; compId: string; portName: string }[] {
+    const ports: { x: number; y: number; compId: string; portName: string }[] = [];
+
+    for (const conv of this.canvasStore.conveyorList) {
+      ports.push({ ...getConveyorPort(conv.x, conv.y, conv.rotation, conv.length, 'input'), compId: conv.id, portName: 'input' });
+      ports.push({ ...getConveyorPort(conv.x, conv.y, conv.rotation, conv.length, 'output'), compId: conv.id, portName: 'output' });
+    }
+    for (const trans of this.canvasStore.transferList) {
+      const half = 25;
+      ports.push({ x: trans.x, y: trans.y - half, compId: trans.id, portName: 'north' });
+      ports.push({ x: trans.x, y: trans.y + half, compId: trans.id, portName: 'south' });
+      ports.push({ x: trans.x + half, y: trans.y, compId: trans.id, portName: 'east' });
+      ports.push({ x: trans.x - half, y: trans.y, compId: trans.id, portName: 'west' });
+    }
+    for (const fork of this.canvasStore.forkliftList) {
+      ports.push({ x: fork.x + 26, y: fork.y, compId: fork.id, portName: 'output' });
+    }
+
+    return ports;
   }
 }

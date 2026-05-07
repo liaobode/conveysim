@@ -70,12 +70,12 @@ function removeRule(dest: string): void {
 
 label {
   font-size: 11px;
-  color: #888;
+  color: var(--color-fg-muted);
 }
 
 .empty {
   font-size: 12px;
-  color: #555;
+  color: var(--color-fg-dark);
   padding: 4px 0;
 }
 
@@ -88,22 +88,22 @@ label {
 }
 
 .dest {
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   flex: 1;
 }
 
 .arrow {
-  color: #666;
+  color: var(--color-fg-dim);
 }
 
 .action {
-  color: #e9a820;
+  color: var(--color-warning);
 }
 
 .btn-remove {
   background: none;
   border: none;
-  color: #e06060;
+  color: var(--color-danger-fg);
   font-size: 14px;
   padding: 0 4px;
   cursor: pointer;
@@ -117,35 +117,35 @@ label {
 
 .dest-input {
   flex: 1;
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   padding: 3px 6px;
   font-size: 12px;
   min-width: 0;
 }
 
 .action-select {
-  background: #1a1a2e;
-  border: 1px solid #0f3460;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   padding: 3px 4px;
   font-size: 11px;
 }
 
 .btn-add {
-  background: #1a3a5a;
-  border: 1px solid #0f3460;
+  background: var(--color-btn-confirm-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--color-fg-primary);
   padding: 3px 8px;
   font-size: 14px;
   cursor: pointer;
 }
 
 .btn-add:hover {
-  background: #2a4a6a;
+  background: var(--color-btn-confirm-hover);
 }
 </style>

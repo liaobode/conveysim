@@ -20,6 +20,7 @@ export class CanvasManager {
   selection: SelectionManager;
   snap: SnapManager;
   private rubberBand: PIXI.Graphics;
+  private lockOverlay: PIXI.Graphics;
 
   private canvasStore = useCanvasStore();
   private editorStore = useEditorStore();
@@ -45,8 +46,9 @@ export class CanvasManager {
     this.gridLayer = new GridLayer(this.worldContainer);
     this.conveyorLayer = new ConveyorLayer(this.worldContainer);
     this.componentLayer = new ComponentLayer(this.worldContainer);
-    // 连接线在移载机层之上
+    // 连接线和端口高亮在移载机层之上
     this.worldContainer.addChild(this.conveyorLayer.connectionLines);
+    this.worldContainer.addChild(this.conveyorLayer.portHighlight);
     this.palletLayer = new PalletLayer(this.worldContainer);
     this.heatmapLayer = new HeatmapLayer(this.worldContainer);
 
@@ -58,6 +60,11 @@ export class CanvasManager {
     // 框选矩形（顶层）
     this.rubberBand = new PIXI.Graphics();
     this.worldContainer.addChild(this.rubberBand);
+
+    // 仿真锁定遮罩（最顶层，默认隐藏）
+    this.lockOverlay = new PIXI.Graphics();
+    this.lockOverlay.visible = false;
+    this.worldContainer.addChild(this.lockOverlay);
 
     // 初始绘制
     this.gridLayer.draw();
@@ -92,6 +99,17 @@ export class CanvasManager {
 
   private onTick = (): void => {
     const running = this.simStore.status === 'running' || this.simStore.status === 'paused';
+    const locked = this.simStore.status !== 'idle' || this.simStore.multiRunTotal > 0;
+
+    // 仿真锁定遮罩
+    this.lockOverlay.visible = locked;
+    if (locked) {
+      this.lockOverlay.clear();
+      this.lockOverlay.beginFill(0x000000, 0.03);
+      this.lockOverlay.drawRect(-10000, -10000, 20000, 20000);
+      this.lockOverlay.endFill();
+    }
+
     if (running || this.simStore.tickCount > 0) {
       this.palletLayer.sync(this.simStore.palletStates, this.canvasStore.conveyors, this.canvasStore.transferMachines, this.canvasStore.forklifts);
       this.heatmapLayer.update(this.simStore.conveyorUtilization, this.canvasStore.conveyorList);

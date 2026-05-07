@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { CanvasManager } from '../../canvas/CanvasManager';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useEditorStore } from '../../stores/editorStore';
@@ -91,7 +91,26 @@ function onMouseMove(e: MouseEvent): void {
   if (canvasManager) {
     if (editorStore.activeTool === 'wire') {
       canvasManager.snap.updateWire(pos.x, pos.y);
+      // 端口悬停高亮
+      const ports = canvasManager.conveyorLayer.getPortPositions();
+      let nearest: { x: number; y: number } | null = null;
+      let minDist = 15; // 15px 吸附距离
+      for (const p of ports) {
+        const dx = p.x - pos.x;
+        const dy = p.y - pos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = p;
+        }
+      }
+      if (nearest) {
+        canvasManager.conveyorLayer.showPortHighlight(nearest.x, nearest.y);
+      } else {
+        canvasManager.conveyorLayer.clearPortHighlight();
+      }
     } else {
+      canvasManager.conveyorLayer.clearPortHighlight();
       canvasManager.selection.handleMouseMove(pos.x, pos.y);
     }
   }
@@ -145,6 +164,13 @@ function onDrop(e: DragEvent): void {
   }
   canvasManager.refreshConveyors();
   canvasManager.refreshComponents();
+}
+
+const zoomPercent = computed(() => Math.round(editorStore.viewport.scale * 100));
+
+function resetZoom(): void {
+  editorStore.setViewport(0, 0, 1);
+  canvasManager?.syncViewport();
 }
 
 function zoomToFit(): void {
@@ -374,29 +400,38 @@ onUnmounted(() => {
 
 <template>
   <div ref="canvasHost" class="canvas-host" @dragover="onDragOver" @drop="onDrop">
-    <button class="zoom-fit-btn" title="缩放至全部组件" @click.stop="zoomToFit">&#9744;</button>
+    <div class="zoom-controls">
+      <button class="zoom-fit-btn" title="适应视图" @click.stop="zoomToFit">&#9744;</button>
+      <button class="zoom-pct-btn" title="重置缩放至100%" @click.stop="resetZoom">{{ zoomPercent }}%</button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .canvas-host {
   flex: 1;
-  background: #0a0a1a;
+  background: var(--color-bg-canvas);
   overflow: hidden;
   position: relative;
 }
 
-.zoom-fit-btn {
+.zoom-controls {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 10;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.zoom-fit-btn {
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+  color: var(--color-fg-primary);
   border-radius: 4px;
   font-size: 16px;
   cursor: pointer;
@@ -404,6 +439,24 @@ onUnmounted(() => {
 }
 
 .zoom-fit-btn:hover {
-  background: #0f3460;
+  background: var(--color-border);
+}
+
+.zoom-pct-btn {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+  color: var(--color-fg-muted);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  min-width: 44px;
+}
+
+.zoom-pct-btn:hover {
+  color: var(--color-fg-primary);
+  background: var(--color-border);
 }
 </style>
