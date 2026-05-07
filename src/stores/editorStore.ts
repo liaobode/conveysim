@@ -9,6 +9,11 @@ export type ToolType =
   | 'forklift-consumer'
   | 'wire';
 
+export interface ClipboardEntry {
+  type: 'conveyor' | 'transfer' | 'forklift';
+  data: Record<string, unknown>;
+}
+
 interface EditorState {
   activeTool: ToolType;
   selectedComponentId: string | null;
@@ -20,6 +25,7 @@ interface EditorState {
   showGrid: boolean;
   mouseWorldPos: { x: number; y: number };
   shiftHeld: boolean;
+  clipboard: ClipboardEntry[];
 }
 
 export const useEditorStore = defineStore('editor', {
@@ -34,6 +40,7 @@ export const useEditorStore = defineStore('editor', {
     showGrid: true,
     mouseWorldPos: { x: 0, y: 0 },
     shiftHeld: false,
+    clipboard: [],
   }),
 
   getters: {
@@ -82,6 +89,14 @@ export const useEditorStore = defineStore('editor', {
     setMouseWorldPos(x: number, y: number): void {
       this.mouseWorldPos.x = x;
       this.mouseWorldPos.y = y;
+    },
+
+    copyToClipboard(entries: ClipboardEntry[]): void {
+      this.clipboard = entries;
+    },
+
+    clearClipboard(): void {
+      this.clipboard = [];
     },
   },
 });

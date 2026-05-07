@@ -18,6 +18,7 @@ export type MainToWorkerMessage =
   | { type: 'STOP' }
   | { type: 'STEP' }
   | { type: 'SET_SPEED'; multiplier: number }
+  | { type: 'SET_MAX_MODE'; enabled: boolean }
   | { type: 'UPDATE_TOPOLOGY'; payload: SceneJSON };
 
 // ======== Worker → 主线程 ========

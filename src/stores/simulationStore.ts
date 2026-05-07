@@ -14,11 +14,13 @@ type SimStatus = 'idle' | 'running' | 'paused';
 interface SimulationState {
   status: SimStatus;
   speedMultiplier: number;
+  maxMode: boolean;
   tickCount: number;
   elapsedSimTime: number;
   palletStates: Record<string, PalletRuntimeState>;
   conveyorUtilization: Record<string, number>;
   zoneStates: Record<string, ZoneState[]>;
+  forkliftCooldowns: Record<string, number>;
   throughput: number;
   dwellStats: Record<string, DwellStats>;
   congestionEvents: CongestionEvent[];
@@ -39,11 +41,13 @@ export const useSimulationStore = defineStore('simulation', {
   state: (): SimulationState => ({
     status: 'idle',
     speedMultiplier: 1,
+    maxMode: false,
     tickCount: 0,
     elapsedSimTime: 0,
     palletStates: {},
     conveyorUtilization: {},
     zoneStates: {},
+    forkliftCooldowns: {},
     throughput: 0,
     dwellStats: {},
     congestionEvents: [],
@@ -117,7 +121,7 @@ export const useSimulationStore = defineStore('simulation', {
               console.log('[Store] Worker ready (Worker mode active)');
               break;
             case 'FRAME_UPDATE': {
-              const { pallets, zoneStates, tickNumber, simTime } = msg.payload;
+              const { pallets, zoneStates, forkliftCooldowns, tickNumber, simTime } = msg.payload;
               this.tickCount = tickNumber;
               this.elapsedSimTime = simTime;
               const states: Record<string, PalletRuntimeState> = {};
@@ -126,6 +130,7 @@ export const useSimulationStore = defineStore('simulation', {
               const zones: Record<string, ZoneState[]> = {};
               for (const [id, zs] of Object.entries(zoneStates)) zones[id] = zs as ZoneState[];
               this.zoneStates = zones;
+              this.forkliftCooldowns = forkliftCooldowns || {};
               break;
             }
             case 'STATISTICS':
@@ -177,7 +182,7 @@ export const useSimulationStore = defineStore('simulation', {
       console.log('[Store] Starting direct simulation on main thread');
       this.directSim = new Simulation({
         onFrameUpdate: (payload) => {
-          const { pallets, zoneStates, tickNumber, simTime } = payload;
+          const { pallets, zoneStates, forkliftCooldowns, tickNumber, simTime } = payload;
           this.tickCount = tickNumber;
           this.elapsedSimTime = simTime;
           const states: Record<string, PalletRuntimeState> = {};
@@ -186,6 +191,7 @@ export const useSimulationStore = defineStore('simulation', {
           const zones: Record<string, ZoneState[]> = {};
           for (const [id, zs] of Object.entries(zoneStates)) zones[id] = zs as ZoneState[];
           this.zoneStates = zones;
+          this.forkliftCooldowns = forkliftCooldowns || {};
         },
         onStatistics: (payload) => {
           this.conveyorUtilization = payload.conveyorUtilization;
@@ -242,6 +248,7 @@ export const useSimulationStore = defineStore('simulation', {
       this.tickCount = 0;
       this.palletStates = {};
       this.zoneStates = {};
+      this.forkliftCooldowns = {};
       this.multiRunTotal = 0;
       this.multiRunResults = [];
       if (this._batchSim) {
@@ -259,10 +266,35 @@ export const useSimulationStore = defineStore('simulation', {
       this.status = 'paused';
     },
 
+    clearData(): void {
+      this.tickCount = 0;
+      this.elapsedSimTime = 0;
+      this.palletStates = {};
+      this.conveyorUtilization = {};
+      this.zoneStates = {};
+      this.forkliftCooldowns = {};
+      this.throughput = 0;
+      this.dwellStats = {};
+      this.congestionEvents = [];
+      this.bottleneckId = null;
+      this.multiRunResults = [];
+    },
+
     setSpeed(multiplier: number): void {
       this.speedMultiplier = multiplier;
+      this.maxMode = false;
       this.sendCommand({ type: 'SET_SPEED', multiplier });
-      if (this.directSim) this.directSim.setSpeed(multiplier);
+      this.sendCommand({ type: 'SET_MAX_MODE', enabled: false });
+      if (this.directSim) {
+        this.directSim.setSpeed(multiplier);
+        this.directSim.setMaxMode(false);
+      }
+    },
+
+    setMaxMode(enabled: boolean): void {
+      this.maxMode = enabled;
+      this.sendCommand({ type: 'SET_MAX_MODE', enabled });
+      if (this.directSim) this.directSim.setMaxMode(enabled);
     },
 
     updateTopology(scene: SceneJSON): void {

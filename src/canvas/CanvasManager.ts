@@ -95,10 +95,12 @@ export class CanvasManager {
     if (running || this.simStore.tickCount > 0) {
       this.palletLayer.sync(this.simStore.palletStates, this.canvasStore.conveyors, this.canvasStore.transferMachines, this.canvasStore.forklifts);
       this.heatmapLayer.update(this.simStore.conveyorUtilization, this.canvasStore.conveyorList);
+      this.componentLayer.updateForkliftCooldowns(this.simStore.forkliftCooldowns, this.canvasStore.forkliftList);
     } else {
       // 停止后清除残留
       this.palletLayer.sync({}, {}, {}, {});
       this.heatmapLayer.update({}, []);
+      this.componentLayer.updateForkliftCooldowns({}, this.canvasStore.forkliftList);
     }
   };
 

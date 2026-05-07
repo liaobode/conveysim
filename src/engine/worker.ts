@@ -53,6 +53,10 @@ self.onmessage = (e: MessageEvent<MainToWorkerMessage>) => {
         simulation?.setSpeed(msg.multiplier);
         break;
 
+      case 'SET_MAX_MODE':
+        simulation?.setMaxMode(msg.enabled);
+        break;
+
       case 'UPDATE_TOPOLOGY':
         if (simulation) {
           simulation.init(msg.payload, 50);

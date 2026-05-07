@@ -191,6 +191,99 @@ function onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') return;
     return;
   }
+
+  // Ctrl+C / Cmd+C：复制选中组件
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+    if (editorStore.selectedComponentIds.length === 0) return;
+    e.preventDefault();
+    const entries: Array<{ type: 'conveyor' | 'transfer' | 'forklift'; data: Record<string, unknown> }> = [];
+    for (const id of editorStore.selectedComponentIds) {
+      const conv = canvasStore.getConveyorById(id);
+      if (conv) {
+        const { id: _id, ...rest } = conv;
+        entries.push({ type: 'conveyor', data: rest as unknown as Record<string, unknown> });
+        continue;
+      }
+      const trans = canvasStore.getTransferById(id);
+      if (trans) {
+        const { id: _id, ...rest } = trans;
+        entries.push({ type: 'transfer', data: rest as unknown as Record<string, unknown> });
+        continue;
+      }
+      const fork = canvasStore.getForkliftById(id);
+      if (fork) {
+        const { id: _id, ...rest } = fork;
+        entries.push({ type: 'forklift', data: rest as unknown as Record<string, unknown> });
+      }
+    }
+    if (entries.length > 0) {
+      editorStore.copyToClipboard(entries);
+    }
+    return;
+  }
+
+  // Ctrl+V / Cmd+V：粘贴
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+    if (editorStore.clipboard.length === 0) return;
+    e.preventDefault();
+    canvasStore.pushUndoSnapshot();
+    const newIds: string[] = [];
+    const offsetX = 30;
+    const offsetY = 30;
+    for (const entry of editorStore.clipboard) {
+      const data = JSON.parse(JSON.stringify(entry.data)) as Record<string, unknown>;
+      data.x = (data.x as number) + offsetX;
+      data.y = (data.y as number) + offsetY;
+      let newId = '';
+      switch (entry.type) {
+        case 'conveyor': {
+          newId = canvasStore.addConveyor(
+            data.type as 'chain' | 'roller',
+            data.x as number,
+            data.y as number,
+            data.rotation as number,
+          );
+          canvasStore.updateConveyor(newId, {
+            length: data.length as number,
+            width: data.width as number,
+            speed: data.speed as number,
+            direction: data.direction as 'forward' | 'bidirectional',
+            zoneSpacing: data.zoneSpacing as number,
+          });
+          break;
+        }
+        case 'transfer': {
+          newId = canvasStore.addTransferMachine(data.x as number, data.y as number);
+          canvasStore.updateTransfer(newId, {
+            actionTime: data.actionTime as number,
+            routingTable: data.routingTable as Record<string, string>,
+            defaultRoute: data.defaultRoute as string,
+            rotatePallet: data.rotatePallet as boolean,
+          });
+          break;
+        }
+        case 'forklift': {
+          newId = canvasStore.addForklift(data.x as number, data.y as number, data.role as 'generator' | 'consumer');
+          canvasStore.updateForklift(newId, {
+            interval: data.interval as number,
+            fluctuation: data.fluctuation as number,
+            destinationTag: data.destinationTag as string,
+            palletSize: data.palletSize as { width: number; height: number },
+          });
+          break;
+        }
+      }
+      if (newId) newIds.push(newId);
+    }
+    if (newIds.length > 0) {
+      editorStore.selectMultiple(newIds);
+      canvasManager?.refreshConveyors();
+      canvasManager?.refreshComponents();
+      canvasManager?.selection.highlightSelected();
+    }
+    return;
+  }
+
   if (e.key === 'Delete' || e.key === 'Backspace') {
     canvasStore.pushUndoSnapshot();
     if (editorStore.selectedConnectionId) {

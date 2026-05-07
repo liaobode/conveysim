@@ -42,6 +42,9 @@ export class Simulation {
   private running = false;
   private paused = false;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private maxMode = false;
+  private skipNextFrameUpdate = false;
+  private static readonly MAX_BATCH_TICKS = 30;
 
   // 统计
   private totalConsumed = 0;
@@ -172,6 +175,11 @@ export class Simulation {
     this.tickDurationSec = (50 / 1000) * multiplier;
   }
 
+  setMaxMode(enabled: boolean): void {
+    this.maxMode = enabled;
+    this.skipNextFrameUpdate = false;
+  }
+
   private loop(): void {
     const baseInterval = 50; // ms
     this.timer = setInterval(() => {
@@ -181,7 +189,15 @@ export class Simulation {
         return;
       }
       if (!this.paused) {
-        this.tick();
+        if (this.maxMode) {
+          for (let i = 0; i < Simulation.MAX_BATCH_TICKS; i++) {
+            this.skipNextFrameUpdate = (i < Simulation.MAX_BATCH_TICKS - 1);
+            if (!this.running) break;
+            this.tick();
+          }
+        } else {
+          this.tick();
+        }
       }
     }, baseInterval);
   }
@@ -271,10 +287,20 @@ export class Simulation {
             break;
           case 'forklift':
             if (downstream.model.role === 'consumer') {
-              downstream.model.tick(dt);
-              this.totalConsumed++;
-              this.emitEvent('PALLET_CONSUMED', downstream.model.id, pallet.id);
-              this.pallets.delete(pallet.id);
+              const action = downstream.model.tick(dt);
+              if (action === 'consume') {
+                this.totalConsumed++;
+                this.emitEvent('PALLET_CONSUMED', downstream.model.id, pallet.id);
+                this.pallets.delete(pallet.id);
+              } else {
+                // 消费者冷却中 → 托盘阻塞在输送机末端等待
+                pallet.isBlocked = true;
+                pallet.currentZoneIndex = conveyor.getExitZoneIndex();
+                pallet.progressInZone = 0.99;
+                conveyor.zones[pallet.currentZoneIndex].occupied = true;
+                conveyor.zones[pallet.currentZoneIndex].occupiedByPalletId = pallet.id;
+                conveyor.pallets.push(pallet);
+              }
             }
             break;
           case 'none':
@@ -295,9 +321,12 @@ export class Simulation {
       console.log('[Sim] tick=' + this.tickNumber + ' simTime=' + this.simTime.toFixed(1) + ' pallets=' + this.pallets.size);
     }
 
-    this.sendFrameUpdate();
+    if (!this.skipNextFrameUpdate) {
+      this.sendFrameUpdate();
+    }
+    this.skipNextFrameUpdate = false;
 
-    // 每 20 ticks 发送统计
+    // 每 20 ticks 发送统计（max 模式下只在最后一帧发送）
     if (this.tickNumber % 20 === 0) {
       this.sendStatistics();
     }

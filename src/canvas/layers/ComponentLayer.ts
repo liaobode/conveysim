@@ -66,4 +66,17 @@ export class ComponentLayer {
   getForklift(id: string): ForkliftGraphic | undefined {
     return this.forklifts.get(id);
   }
+
+  updateForkliftCooldowns(cooldowns: Record<string, number>, forklifts: ForkliftData[]): void {
+    const intervalMap = new Map<string, number>();
+    for (const f of forklifts) intervalMap.set(f.id, f.interval);
+
+    for (const [id, g] of this.forklifts) {
+      const cooldown = cooldowns[id];
+      const interval = intervalMap.get(id);
+      if (cooldown !== undefined && interval !== undefined) {
+        g.updateCooldown(cooldown, interval);
+      }
+    }
+  }
 }

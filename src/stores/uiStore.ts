@@ -55,6 +55,12 @@ export const useUIStore = defineStore('ui', {
       this.batchDialogVisible = false;
     },
     addToast(message: string, type: ToastType): void {
+      // 去重：相同消息已存在则跳过
+      if (this.toasts.some((t) => t.message === message)) return;
+      // 限制最大显示数
+      if (this.toasts.length >= 3) {
+        this.toasts.shift();
+      }
       const id = Date.now();
       this.toasts.push({ id, message, type });
       setTimeout(() => {

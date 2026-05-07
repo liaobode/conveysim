@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -6,6 +7,52 @@ import { useUIStore } from '../../stores/uiStore';
 const simStore = useSimulationStore();
 const canvasStore = useCanvasStore();
 const uiStore = useUIStore();
+
+const speedMenuOpen = ref(false);
+const speedOptions = [
+  { label: '1x', value: 1, isMax: false },
+  { label: '2x', value: 2, isMax: false },
+  { label: '4x', value: 4, isMax: false },
+  { label: '8x', value: 8, isMax: false },
+  { label: '16x', value: 16, isMax: false },
+  { label: 'Max', value: 0, isMax: true },
+] as const;
+
+function toggleSpeedMenu(): void {
+  speedMenuOpen.value = !speedMenuOpen.value;
+}
+
+function selectSpeed(opt: { label: string; value: number; isMax: boolean }): void {
+  speedMenuOpen.value = false;
+  if (opt.isMax) {
+    simStore.setMaxMode(true);
+  } else {
+    simStore.setSpeed(opt.value);
+  }
+}
+
+function closeSpeedMenu(): void {
+  speedMenuOpen.value = false;
+}
+
+function currentSpeedLabel(): string {
+  if (simStore.maxMode) return 'Max';
+  return simStore.speedMultiplier + 'x';
+}
+
+function onClickOutside(e: MouseEvent): void {
+  if (speedMenuOpen.value) {
+    speedMenuOpen.value = false;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside);
+});
 
 function onStart(): void {
   const scene = canvasStore.toJSON();
@@ -38,13 +85,6 @@ function onStep(): void {
   simStore.step();
 }
 
-function cycleSpeed(): void {
-  const speeds = [1, 2, 4];
-  const idx = speeds.indexOf(simStore.speedMultiplier);
-  const next = speeds[(idx + 1) % speeds.length];
-  simStore.setSpeed(next);
-}
-
 function onBatchRun(): void {
   uiStore.openBatchDialog();
 }
@@ -52,6 +92,7 @@ function onBatchRun(): void {
 function onClear(): void {
   if (simStore.status !== 'idle') return;
   canvasStore.clear();
+  simStore.clearData();
 }
 
 function setupTestCircuit(): void {
@@ -128,7 +169,18 @@ function setupTestCircuit(): void {
         title="单步推进一帧"
         @click="onStep"
       >&#9654;| 单步</button>
-      <button class="btn speed-btn" title="切换速度" @click="cycleSpeed">{{ simStore.speedMultiplier }}x</button>
+      <div class="speed-wrap" @click.stop>
+        <button class="btn speed-btn" title="选择仿真速度" @click="toggleSpeedMenu">{{ currentSpeedLabel() }}</button>
+        <div v-if="speedMenuOpen" class="speed-dropdown" @click.stop>
+          <div
+            v-for="opt in speedOptions"
+            :key="opt.label"
+            class="speed-option"
+            :class="{ active: opt.isMax ? simStore.maxMode : (!simStore.maxMode && simStore.speedMultiplier === opt.value) }"
+            @click="selectSpeed(opt)"
+          >{{ opt.label }}</div>
+        </div>
+      </div>
       <span class="sep"></span>
       <button
         class="btn"
@@ -173,6 +225,7 @@ function setupTestCircuit(): void {
   color: #e0e0e0;
   border-radius: 4px;
   font-size: 12px;
+  cursor: pointer;
 }
 
 .btn:disabled {
@@ -191,15 +244,50 @@ function setupTestCircuit(): void {
   margin: 0 4px;
 }
 
+.speed-wrap {
+  position: relative;
+}
+
 .speed-btn {
   width: auto;
   padding: 0 6px;
   font-size: 12px;
   color: #e9a820;
-  min-width: 28px;
+  min-width: 36px;
+  cursor: pointer;
 }
 
 .speed-btn:hover {
   color: #e94560;
+}
+
+.speed-dropdown {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  background: #1a1a2e;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 100;
+  min-width: 56px;
+}
+
+.speed-option {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #e0e0e0;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.speed-option:hover {
+  background: #0f3460;
+}
+
+.speed-option.active {
+  color: #e94560;
+  background: #1a1030;
 }
 </style>
