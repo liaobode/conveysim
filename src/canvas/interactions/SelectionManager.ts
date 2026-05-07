@@ -16,6 +16,7 @@ export class SelectionManager {
   private canvasStore = useCanvasStore();
 
   private isDragging = false;
+  private hasMoved = false;
   private dragStart = { x: 0, y: 0 };
   private dragTargets: CompPos[] = [];
 
@@ -58,6 +59,8 @@ export class SelectionManager {
   handleMouseMove(worldX: number, worldY: number): void {
     if (!this.isDragging || this.dragTargets.length === 0) return;
 
+    this.hasMoved = true;
+
     const dx = worldX - this.dragStart.x;
     const dy = worldY - this.dragStart.y;
 
@@ -77,13 +80,16 @@ export class SelectionManager {
     const wasDragging = this.isDragging;
     if (this.isDragging) {
       this.isDragging = false;
-      // 拖拽后尝试自动连接
-      for (const target of this.dragTargets) {
-        const created = this.canvasManager.snap.autoConnect(target.id);
-        if (created.length > 0) {
-          this.canvasManager.refreshConveyors();
+      // 只有真正移动后才触发自动连接（避免点击就乱连）
+      if (this.hasMoved) {
+        for (const target of this.dragTargets) {
+          const created = this.canvasManager.snap.autoConnect(target.id);
+          if (created.length > 0) {
+            this.canvasManager.refreshConveyors();
+          }
         }
       }
+      this.hasMoved = false;
       this.dragTargets = [];
     }
     return wasDragging;
@@ -158,6 +164,7 @@ export class SelectionManager {
 
   private startSingleDrag(id: string, wx: number, wy: number): void {
     this.isDragging = true;
+    this.hasMoved = false;
     this.dragStart = { x: wx, y: wy };
     const c = this.getComponentData(id);
     this.dragTargets = c ? [{ id, ...c }] : [];
@@ -165,6 +172,7 @@ export class SelectionManager {
 
   private startMultiDrag(wx: number, wy: number): void {
     this.isDragging = true;
+    this.hasMoved = false;
     this.dragStart = { x: wx, y: wy };
     this.dragTargets = [];
     for (const id of this.editorStore.selectedComponentIds) {

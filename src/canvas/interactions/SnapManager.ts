@@ -110,13 +110,14 @@ export class SnapManager {
     for (const { id, geometry } of ports) {
       const target = this.findSnapTarget(componentId, id.portName, geometry.worldX, geometry.worldY);
       if (target) {
-        // 确保没有重复连接
-        if (!this.hasConnection(id, target)) {
+        // input 端口作为连接目标（如消费者接收托盘），方向反转
+        const [fromComp, fromPort, toComp, toPort] = id.portName === 'input'
+          ? [target.componentId, target.portName, id.componentId, id.portName]
+          : [id.componentId, id.portName, target.componentId, target.portName];
+
+        // 确保没有重复：精确端口对 + 组件间任意端口
+        if (!this.hasConnection(id, target) && !this.areComponentsConnected(fromComp, toComp)) {
           this.canvasStore.pushUndoSnapshot();
-          // input 端口作为连接目标（如消费者接收托盘），方向反转
-          const [fromComp, fromPort, toComp, toPort] = id.portName === 'input'
-            ? [target.componentId, target.portName, id.componentId, id.portName]
-            : [id.componentId, id.portName, target.componentId, target.portName];
           const connId = this.canvasStore.addConnection(fromComp, fromPort, toComp, toPort);
           created.push(connId);
         }
@@ -150,7 +151,7 @@ export class SnapManager {
     return false;
   }
 
-  /** 检查是否已有连接 */
+  /** 检查是否已有连接（精确端口对） */
   hasConnection(from: PortId, to: PortId): boolean {
     for (const conn of Object.values(this.canvasStore.connections)) {
       if (
@@ -161,6 +162,16 @@ export class SnapManager {
         conn.from.componentId === to.componentId && conn.from.portName === to.portName &&
         conn.to.componentId === from.componentId && conn.to.portName === from.portName
       ) return true;
+    }
+    return false;
+  }
+
+  /** 检查两个组件是否已通过任意端口连接 */
+  private areComponentsConnected(compA: string, compB: string): boolean {
+    for (const conn of Object.values(this.canvasStore.connections)) {
+      const fromA = conn.from.componentId === compA || conn.to.componentId === compA;
+      const fromB = conn.from.componentId === compB || conn.to.componentId === compB;
+      if (fromA && fromB) return true;
     }
     return false;
   }
