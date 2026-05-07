@@ -12,6 +12,7 @@ export class TransferModel {
   remainingActionTime: number;
   routingTable: Record<string, string>;
   defaultRoute: string;
+  rotatePallet: boolean;
   processingPallet: PalletModel | null = null;
   targetPort: string | null = null;
   inputQueue: PalletModel[] = [];
@@ -23,6 +24,7 @@ export class TransferModel {
     this.remainingActionTime = 0;
     this.routingTable = { ...data.routingTable };
     this.defaultRoute = data.defaultRoute;
+    this.rotatePallet = data.rotatePallet ?? false;
   }
 
   receivePallet(pallet: PalletModel): boolean {

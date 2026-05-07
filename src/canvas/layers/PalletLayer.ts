@@ -52,7 +52,7 @@ export class PalletLayer {
       g.endFill();
 
       g.position.set(pos.x, pos.y);
-      g.rotation = pos.rotation;
+      g.rotation = state.worldRotation;
     }
   }
 

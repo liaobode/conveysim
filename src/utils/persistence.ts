@@ -69,3 +69,39 @@ export function uploadJSON(): Promise<SceneJSON> {
     input.click();
   });
 }
+
+// ====== 场景管理 ======
+
+export interface SavedScene {
+  name: string;
+  data: SceneJSON;
+  savedAt: number;
+}
+
+const SCENES_KEY = 'conveysim-scenes';
+
+export function listScenes(): SavedScene[] {
+  try {
+    const raw = localStorage.getItem(SCENES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function saveScene(name: string, scene: SceneJSON): void {
+  const scenes = listScenes();
+  const idx = scenes.findIndex(s => s.name === name);
+  const entry: SavedScene = { name, data: scene, savedAt: Date.now() };
+  if (idx >= 0) scenes[idx] = entry;
+  else scenes.push(entry);
+  localStorage.setItem(SCENES_KEY, JSON.stringify(scenes));
+}
+
+export function deleteScene(name: string): void {
+  const scenes = listScenes().filter(s => s.name !== name);
+  localStorage.setItem(SCENES_KEY, JSON.stringify(scenes));
+}
+
+export function loadScene(name: string): SceneJSON | null {
+  const scene = listScenes().find(s => s.name === name);
+  return scene ? scene.data : null;
+}

@@ -12,6 +12,7 @@ export class ConveyorModel {
   zones: ZoneState[];
   zoneCount: number;
   maxCapacity: number;
+  rotation: number;
   pallets: PalletModel[] = [];
 
   constructor(data: ConveyorData) {
@@ -22,6 +23,7 @@ export class ConveyorModel {
     this.direction = 1; // 默认正向
     this.bidirectional = data.direction === 'bidirectional';
     this.zoneSpacing = data.zoneSpacing;
+    this.rotation = data.rotation;
 
     this.zoneCount = Math.max(1, Math.floor(data.length / data.zoneSpacing));
     this.maxCapacity = this.zoneCount;
@@ -50,9 +52,8 @@ export class ConveyorModel {
     return !this.zones[this.getEntryZoneIndex()].occupied;
   }
 
-  acceptPallet(pallet: PalletModel, fromPort = 'input'): void {
+  acceptPallet(pallet: PalletModel, fromPort = 'input', simTime = 0): void {
     let idx = this.getEntryZoneIndex();
-    // 双向：从 output 端口进入 → 逆方向
     if (this.bidirectional && fromPort === 'output') {
       idx = this.getExitZoneIndex();
       pallet._reverseFlow = true;
@@ -63,6 +64,7 @@ export class ConveyorModel {
     pallet.currentZoneIndex = idx;
     pallet.progressInZone = 0;
     pallet.isBlocked = false;
+    pallet.enterTime = simTime;
     this.pallets.push(pallet);
   }
 

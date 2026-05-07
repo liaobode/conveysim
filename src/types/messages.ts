@@ -31,10 +31,25 @@ export interface FrameUpdatePayload {
   zoneStates: Record<string, ZoneState[]>;
 }
 
+export interface DwellStats {
+  totalSec: number;
+  count: number;
+  maxSec: number;
+}
+
+export interface CongestionEvent {
+  conveyorId: string;
+  startSec: number;
+  endSec: number;
+}
+
 export interface StatisticsPayload {
   conveyorUtilization: Record<string, number>;
   overallThroughput: number;
   transferActionCounts: Record<string, number>;
+  dwellStats: Record<string, DwellStats>;
+  congestionEvents: CongestionEvent[];
+  bottleneckId: string | null;
 }
 
 export type SimulationEventType =

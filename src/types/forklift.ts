@@ -6,6 +6,8 @@ export interface ForkliftData {
   y: number;
   role: ForkliftRole;
   interval: number;
+  /** 随机波动，0 = 死节拍，0.2 = ±20% */
+  fluctuation: number;
   destinationTag: string;
   palletSize: { width: number; height: number };
 }

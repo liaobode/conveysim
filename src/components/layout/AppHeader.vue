@@ -85,9 +85,9 @@ function setupTestCircuit(): void {
   <header class="app-header">
     <span class="logo">ConveySim</span>
     <div class="controls">
-      <button class="btn" title="测试回路" @click="setupTestCircuit">&#9881;</button>
-      <button class="btn" @click="uiStore.openLoadDialog()">&#128193;</button>
-      <button class="btn" @click="uiStore.openSaveDialog()">&#128190;</button>
+      <button class="btn" title="搭建测试回路" @click="setupTestCircuit">&#9881; 测试</button>
+      <button class="btn" title="导入场景" @click="uiStore.openLoadDialog()">&#128193; 导入</button>
+      <button class="btn" title="保存场景" @click="uiStore.openSaveDialog()">&#128190; 保存</button>
       <span class="sep"></span>
       <button
         class="btn"

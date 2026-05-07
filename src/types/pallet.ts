@@ -11,4 +11,5 @@ export interface PalletRuntimeState {
   progressInZone: number;
   isBlocked: boolean;
   size: { width: number; height: number };
+  worldRotation: number;
 }

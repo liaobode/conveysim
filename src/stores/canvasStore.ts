@@ -98,6 +98,7 @@ export const useCanvasStore = defineStore('canvas', {
         actionTime: 2,
         routingTable: {},
         defaultRoute: 'straight',
+        rotatePallet: false,
       };
       this.version++;
       return id;
@@ -108,6 +109,7 @@ export const useCanvasStore = defineStore('canvas', {
       this.forklifts[id] = {
         id, x, y, role,
         interval: 60,
+        fluctuation: 0,
         destinationTag: role === 'generator' ? 'sink-default' : '',
         palletSize: { width: 1.2, height: 1.0 },
       };

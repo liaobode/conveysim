@@ -5,6 +5,8 @@ export interface TransferMachineData {
   actionTime: number;
   routingTable: Record<string, string>;
   defaultRoute: string;
+  /** 是否需要旋转货物方向 */
+  rotatePallet: boolean;
 }
 
 export interface TransferRuntimeState {

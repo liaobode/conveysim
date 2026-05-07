@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js';
 import type { ConveyorData } from '../../types';
 import { metersToPixels } from '../../utils/geometry';
+import { useSimulationStore } from '../../stores/simulationStore';
 
 function utilizationToColor(util: number): { hex: number; alpha: number } {
   if (util < 0.5) {
@@ -18,6 +19,8 @@ function utilizationToColor(util: number): { hex: number; alpha: number } {
 export class HeatmapLayer {
   private container: PIXI.Container;
   private overlays = new Map<string, PIXI.Graphics>();
+  private simStore = useSimulationStore();
+  private pulseTime = 0;
 
   constructor(parent: PIXI.Container) {
     this.container = new PIXI.Container();
@@ -28,6 +31,7 @@ export class HeatmapLayer {
     utilization: Record<string, number>,
     conveyors: ConveyorData[],
   ): void {
+    this.pulseTime += 0.05;
     const conveyorMap = new Map(conveyors.map((c) => [c.id, c]));
     const activeIds = new Set(Object.keys(utilization));
 
@@ -45,7 +49,11 @@ export class HeatmapLayer {
       const conveyor = conveyorMap.get(id);
       if (!conveyor) continue;
 
-      const { hex, alpha } = utilizationToColor(util);
+      let { hex, alpha } = utilizationToColor(util);
+      // 瓶颈段脉冲闪烁
+      if (id === this.simStore.bottleneckId && util >= 0.5) {
+        alpha = 0.4 + 0.3 * Math.sin(this.pulseTime * 3);
+      }
       let graphic = this.overlays.get(id);
       if (!graphic) {
         graphic = new PIXI.Graphics();

@@ -31,6 +31,16 @@ export class Simulation {
   private totalConsumed = 0;
   private transferActionCounts: Record<string, number> = {};
 
+  // 各段停留时间: conveyorId → { totalSec, count, maxSec }
+  private dwellStats: Record<string, { totalSec: number; count: number; maxSec: number }> = {};
+
+  // 拥堵事件: { conveyorId, startSec, endSec }
+  private congestionEvents: { conveyorId: string; startSec: number; endSec: number }[] = [];
+  private congestionStart: Record<string, number> = {}; // 当前拥堵起始时间
+
+  // 瓶颈
+  private bottleneckId: string | null = null;
+
   // 回调
   private onFrameUpdate?: (payload: any) => void;
   private onStatistics?: (payload: any) => void;
@@ -55,6 +65,10 @@ export class Simulation {
     this.simTime = 0;
     this.totalConsumed = 0;
     this.transferActionCounts = {};
+    this.dwellStats = {};
+    this.congestionEvents = [];
+    this.congestionStart = {};
+    this.bottleneckId = null;
 
     this.conveyors.clear();
     this.transfers.clear();
@@ -122,6 +136,12 @@ export class Simulation {
   stop(): void {
     this.running = false;
     this.paused = false;
+    // 结束所有进行中的拥堵
+    for (const [id, start] of Object.entries(this.congestionStart)) {
+      this.congestionEvents.push({ conveyorId: id, startSec: start, endSec: this.simTime });
+    }
+    this.congestionStart = {};
+    this.identifyBottleneck();
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -167,7 +187,8 @@ export class Simulation {
             forklift.palletSize,
           );
           this.pallets.set(pallet.id, pallet);
-          downstream.model.acceptPallet(pallet);
+          downstream.model.acceptPallet(pallet, 'input', this.simTime);
+          pallet.worldRotation = downstream.model.rotation;
           this.emitEvent('PALLET_GENERATED', forklift.id, pallet.id);
         } else {
           this.emitEvent('CAPACITY_REJECTED', forklift.id, undefined, '下游输送机入口已满');
@@ -185,7 +206,11 @@ export class Simulation {
         // 根据路由决定下游端口
         const downstream = this.getDownstream(transfer.id, result.targetPort);
         if (downstream.kind === 'conveyor' && downstream.model.canAcceptPallet()) {
-          downstream.model.acceptPallet(result.pallet);
+          downstream.model.acceptPallet(result.pallet, 'input', this.simTime);
+          // 按移载机配置决定是否旋转货物
+          if (transfer.rotatePallet) {
+            result.pallet.worldRotation = downstream.model.rotation;
+          }
           this.emitEvent('TRANSFER_COMPLETE', transfer.id, result.pallet.id);
         } else {
           // 下游满，下个 tick 重试
@@ -200,14 +225,15 @@ export class Simulation {
       for (const { pallet, reachedEnd } of results) {
         if (!reachedEnd) continue;
 
-        // 托盘到达输送机末端
+        // 托盘到达输送机末端 → 记录停留时间
+        this.recordDwell(pallet);
         conveyor.removePallet(pallet);
 
         const downstream = this.getDownstream(conveyor.id, 'output');
         switch (downstream.kind) {
           case 'conveyor':
             if (downstream.model.canAcceptPallet()) {
-              downstream.model.acceptPallet(pallet);
+              downstream.model.acceptPallet(pallet, 'input', this.simTime);
             } else {
               // 下游满 → 留在当前输送机最后一个分区
               pallet.isBlocked = true;
@@ -247,6 +273,8 @@ export class Simulation {
     this.tickNumber++;
     this.simTime += dt;
 
+    this.checkCongestion();
+
     if (this.tickNumber % 20 === 1) {
       console.log('[Sim] tick=' + this.tickNumber + ' simTime=' + this.simTime.toFixed(1) + ' pallets=' + this.pallets.size);
     }
@@ -273,6 +301,7 @@ export class Simulation {
         progressInZone: p.progressInZone,
         isBlocked: p.isBlocked,
         size: { ...p.size },
+        worldRotation: p.worldRotation,
       });
     }
 
@@ -306,6 +335,54 @@ export class Simulation {
     });
   }
 
+  private recordDwell(pallet: PalletModel): void {
+    const compId = pallet.currentComponentId;
+    const dwell = this.simTime - pallet.enterTime;
+    if (dwell <= 0) return;
+
+    const stats = this.dwellStats[compId];
+    if (!stats) {
+      this.dwellStats[compId] = { totalSec: dwell, count: 1, maxSec: dwell };
+    } else {
+      stats.totalSec += dwell;
+      stats.count++;
+      if (dwell > stats.maxSec) stats.maxSec = dwell;
+    }
+  }
+
+  private checkCongestion(): void {
+    for (const [, conv] of this.conveyors) {
+      const util = conv.utilization;
+      const isCongested = util >= 0.85;
+      const wasCongested = this.congestionStart[conv.id] !== undefined;
+
+      if (isCongested && !wasCongested) {
+        this.congestionStart[conv.id] = this.simTime;
+      } else if (!isCongested && wasCongested) {
+        this.congestionEvents.push({
+          conveyorId: conv.id,
+          startSec: this.congestionStart[conv.id],
+          endSec: this.simTime,
+        });
+        delete this.congestionStart[conv.id];
+      }
+    }
+  }
+
+  private identifyBottleneck(): void {
+    let worst = '';
+    let worstScore = 0;
+    for (const [id, stats] of Object.entries(this.dwellStats)) {
+      const avgUtil = this.conveyors.get(id)?.utilization ?? 0;
+      const score = stats.totalSec + avgUtil * 100;
+      if (score > worstScore) {
+        worstScore = score;
+        worst = id;
+      }
+    }
+    this.bottleneckId = worst || null;
+  }
+
   private sendStatistics(): void {
     if (!this.onStatistics) return;
     const conveyorUtilization: Record<string, number> = {};
@@ -320,6 +397,9 @@ export class Simulation {
       conveyorUtilization,
       overallThroughput,
       transferActionCounts: { ...this.transferActionCounts },
+      dwellStats: { ...this.dwellStats },
+      congestionEvents: [...this.congestionEvents],
+      bottleneckId: this.bottleneckId,
     });
   }
 

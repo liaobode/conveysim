@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import type {
   PalletRuntimeState,
   ZoneState,
+  DwellStats,
+  CongestionEvent,
   SceneJSON,
 } from '../types';
 import { Simulation } from '../engine/Simulation';
@@ -17,6 +19,9 @@ interface SimulationState {
   conveyorUtilization: Record<string, number>;
   zoneStates: Record<string, ZoneState[]>;
   throughput: number;
+  dwellStats: Record<string, DwellStats>;
+  congestionEvents: CongestionEvent[];
+  bottleneckId: string | null;
   worker: Worker | null;
   directSim: Simulation | null;
 }
@@ -31,6 +36,9 @@ export const useSimulationStore = defineStore('simulation', {
     conveyorUtilization: {},
     zoneStates: {},
     throughput: 0,
+    dwellStats: {},
+    congestionEvents: [],
+    bottleneckId: null,
     worker: null,
     directSim: null,
   }),
@@ -54,6 +62,9 @@ export const useSimulationStore = defineStore('simulation', {
       this.conveyorUtilization = {};
       this.zoneStates = {};
       this.throughput = 0;
+      this.dwellStats = {};
+      this.congestionEvents = [];
+      this.bottleneckId = null;
 
       let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -106,6 +117,9 @@ export const useSimulationStore = defineStore('simulation', {
             case 'STATISTICS':
               this.conveyorUtilization = msg.payload.conveyorUtilization;
               this.throughput = msg.payload.overallThroughput;
+              this.dwellStats = msg.payload.dwellStats || {};
+              this.congestionEvents = msg.payload.congestionEvents || [];
+              this.bottleneckId = msg.payload.bottleneckId || null;
               break;
             case 'SIMULATION_EVENT':
               if (msg.payload.eventType === 'ERROR') {
@@ -162,6 +176,9 @@ export const useSimulationStore = defineStore('simulation', {
         onStatistics: (payload) => {
           this.conveyorUtilization = payload.conveyorUtilization;
           this.throughput = payload.overallThroughput;
+          this.dwellStats = payload.dwellStats || {};
+          this.congestionEvents = payload.congestionEvents || [];
+          this.bottleneckId = payload.bottleneckId || null;
         },
         onEvent: (_payload) => {},
       });
@@ -214,6 +231,9 @@ export const useSimulationStore = defineStore('simulation', {
       this.conveyorUtilization = {};
       this.zoneStates = {};
       this.throughput = 0;
+      this.dwellStats = {};
+      this.congestionEvents = [];
+      this.bottleneckId = null;
     },
 
     step(): void {

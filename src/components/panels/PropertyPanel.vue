@@ -135,6 +135,15 @@ function deleteComponent(): void {
         <option value="turn">转向</option>
       </select>
 
+      <label>旋转货物方向</label>
+      <select
+        :value="transferData.rotatePallet ? 'yes' : 'no'"
+        @change="updateTransfer({ rotatePallet: ($event.target as HTMLSelectElement).value === 'yes' })"
+      >
+        <option value="no">不旋转</option>
+        <option value="yes">旋转</option>
+      </select>
+
       <RoutingTable
         :routing-table="transferData.routingTable"
         @update="updateTransfer({ routingTable: $event })"
@@ -153,6 +162,18 @@ function deleteComponent(): void {
         min="1" step="1"
         @change="updateForklift({ interval: +($event.target as HTMLInputElement).value })"
       />
+
+      <label>波动范围</label>
+      <select
+        :value="forkliftData.fluctuation"
+        @change="updateForklift({ fluctuation: +($event.target as HTMLSelectElement).value })"
+      >
+        <option :value="0">±0% (死节拍)</option>
+        <option :value="0.1">±10%</option>
+        <option :value="0.2">±20%</option>
+        <option :value="0.3">±30%</option>
+        <option :value="0.5">±50%</option>
+      </select>
 
       <label v-if="forkliftData.role === 'generator'">托盘目的地标签</label>
       <input
