@@ -3,7 +3,7 @@ import type { PortGeometry, PortId } from '../../types';
 import { getConveyorPort, distance } from '../../utils/geometry';
 import { useCanvasStore } from '../../stores/canvasStore';
 
-const SNAP_THRESHOLD = 20;
+const SNAP_THRESHOLD = 80;
 const TRANSFER_SIZE = 50;
 
 export class SnapManager {
