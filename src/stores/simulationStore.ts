@@ -24,6 +24,14 @@ interface SimulationState {
   bottleneckId: string | null;
   worker: Worker | null;
   directSim: Simulation | null;
+  /** 仿真时长限制（秒），0 = 无限制 */
+  timeLimitSec: number;
+  /** 批量运行 */
+  multiRunTotal: number;
+  multiRunCurrent: number;
+  multiRunResults: { throughput: number; maxUtil: Record<string, number> }[];
+  /** 批量运行时当前正在跑的 sim 实例，用于即时停止 */
+  _batchSim: Simulation | null;
 }
 
 export const useSimulationStore = defineStore('simulation', {
@@ -41,6 +49,11 @@ export const useSimulationStore = defineStore('simulation', {
     bottleneckId: null,
     worker: null,
     directSim: null,
+    timeLimitSec: 0,
+    multiRunTotal: 0,
+    multiRunCurrent: 0,
+    multiRunResults: [],
+    _batchSim: null,
   }),
 
   actions: {
@@ -223,17 +236,17 @@ export const useSimulationStore = defineStore('simulation', {
         this.worker.terminate();
         this.worker = null;
       }
-      // 清空所有仿真状态，画布回到初始
+      // 停止仿真，保留分析数据供查看
       this.status = 'idle';
       this.tickCount = 0;
-      this.elapsedSimTime = 0;
       this.palletStates = {};
-      this.conveyorUtilization = {};
       this.zoneStates = {};
-      this.throughput = 0;
-      this.dwellStats = {};
-      this.congestionEvents = [];
-      this.bottleneckId = null;
+      this.multiRunTotal = 0;
+      this.multiRunResults = [];
+      if (this._batchSim) {
+        this._batchSim.stop();
+        this._batchSim = null;
+      }
     },
 
     step(): void {
@@ -255,6 +268,81 @@ export const useSimulationStore = defineStore('simulation', {
       const plainScene = JSON.parse(JSON.stringify(scene));
       this.sendCommand({ type: 'UPDATE_TOPOLOGY', payload: plainScene });
       if (this.directSim) this.directSim.init(scene, 50);
+    },
+
+    /** 批量自动运行 */
+    async runBatch(scene: SceneJSON, totalRuns: number, timeLimitSec: number): Promise<void> {
+      this.multiRunTotal = totalRuns;
+      this.multiRunCurrent = 0;
+      this.multiRunResults = [];
+      this.timeLimitSec = timeLimitSec;
+
+      for (let i = 0; i < totalRuns; i++) {
+        // 检查是否被取消
+        if ((this.status as string) === 'idle' && this.multiRunTotal === 0) {
+          this.multiRunResults = [];
+          return;
+        }
+
+        this.multiRunCurrent = i + 1;
+        this.status = 'running';
+
+        // 每轮前 yield 给 UI 呼吸
+        await new Promise(r => setTimeout(r, 50));
+
+        const sim = new Simulation({
+          onFrameUpdate: () => {},
+          onStatistics: () => {},
+          onEvent: () => {},
+        });
+        sim.init(JSON.parse(JSON.stringify(scene)), 50);
+        this._batchSim = sim;
+        sim.start();
+
+        // 分段等待，允许 UI 更新 + 检查取消信号
+        await new Promise<void>((resolve) => {
+          const check = setInterval(() => {
+            if ((this.status as string) === 'idle' && this.multiRunTotal === 0) {
+              // 被停止
+              sim.stop();
+              clearInterval(check);
+              resolve();
+              return;
+            }
+            if (sim.elapsedTime >= timeLimitSec) {
+              sim.stop();
+              clearInterval(check);
+              resolve();
+            }
+          }, 30);
+        });
+
+        if (this.multiRunTotal === 0) return;
+
+        // 收集结果
+        const stats = sim.getStats();
+        const maxUtil: Record<string, number> = {};
+        for (const [id, u] of Object.entries(stats.conveyorUtilization)) {
+          maxUtil[id] = Math.max(maxUtil[id] || 0, u);
+        }
+        this.multiRunResults.push({
+          throughput: stats.overallThroughput,
+          maxUtil,
+        });
+
+        // 更新最后一次的统计
+        this.throughput = stats.overallThroughput;
+        this.conveyorUtilization = stats.conveyorUtilization;
+        this.dwellStats = stats.dwellStats;
+        this.congestionEvents = stats.congestionEvents;
+        this.bottleneckId = stats.bottleneckId;
+        this.elapsedSimTime = stats.simTime;
+
+        // 显式释放本轮 sim 引用，帮助 GC
+        this._batchSim = null;
+      }
+
+      this.status = 'idle';
     },
 
     destroyWorker(): void {

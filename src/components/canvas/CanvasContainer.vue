@@ -3,6 +3,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { CanvasManager } from '../../canvas/CanvasManager';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useEditorStore } from '../../stores/editorStore';
+import { useSimulationStore } from '../../stores/simulationStore';
 import { handleCanvasDrop } from '../../canvas/interactions/DragFromToolbar';
 import { screenToWorld } from '../../utils/geometry';
 import { saveDraft, loadDraft } from '../../utils/persistence';
@@ -11,6 +12,10 @@ const canvasHost = ref<HTMLDivElement>();
 let canvasManager: CanvasManager | null = null;
 const canvasStore = useCanvasStore();
 const editorStore = useEditorStore();
+const simStore = useSimulationStore();
+
+/** 仿真运行时锁定编辑 */
+const editingLocked = () => simStore.status !== 'idle' || simStore.multiRunTotal > 0;
 
 // 视口拖拽
 let isPanning = false;
@@ -28,6 +33,7 @@ let isRubberBand = false;
 let rubberStart = { x: 0, y: 0 };
 
 function onMouseDown(e: MouseEvent): void {
+  if (editingLocked() && e.button !== 1) return;
   if (e.button === 1) {
     e.preventDefault();
     startPan(e);
@@ -130,7 +136,7 @@ function onDragOver(e: DragEvent): void {
 
 function onDrop(e: DragEvent): void {
   e.preventDefault();
-  if (!canvasHost.value || !canvasManager) return;
+  if (editingLocked() || !canvasHost.value || !canvasManager) return;
   const rect = canvasHost.value.getBoundingClientRect();
   canvasStore.pushUndoSnapshot();
   const newId = handleCanvasDrop(e, rect, editorStore.viewport);
@@ -144,6 +150,11 @@ function onDrop(e: DragEvent): void {
 function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Shift') {
     editorStore.shiftHeld = true;
+    return;
+  }
+
+  if (editingLocked()) {
+    if (e.key === 'Escape') return;
     return;
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {

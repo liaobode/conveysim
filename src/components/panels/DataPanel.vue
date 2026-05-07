@@ -49,8 +49,21 @@ const bottleneckLabel = computed(() => {
 });
 
 const hasData = computed(() =>
-  simStore.status === 'running' || simStore.status === 'paused' || simStore.tickCount > 0,
+  simStore.status === 'running' ||
+  simStore.status === 'paused' ||
+  simStore.elapsedSimTime > 0 ||
+  simStore.multiRunResults.length > 0,
 );
+
+const multiRunSummary = computed(() => {
+  const results = simStore.multiRunResults;
+  if (results.length === 0) return null;
+  const tps = results.map(r => r.throughput);
+  const avg = tps.reduce((a, b) => a + b, 0) / tps.length;
+  const min = Math.min(...tps);
+  const max = Math.max(...tps);
+  return { avg, min, max };
+});
 
 function exportReport(): void {
   const report = {
@@ -110,6 +123,23 @@ function exportReport(): void {
           <span class="event-label">{{ convLabel(evt.conveyorId) }}</span>
           <span class="event-time">{{ evt.startSec.toFixed(0) }}s ~ {{ evt.endSec.toFixed(0) }}s</span>
           <span class="event-dur">{{ (evt.endSec - evt.startSec).toFixed(0) }}s</span>
+        </div>
+      </div>
+
+      <!-- 批量运行结果 -->
+      <div v-if="multiRunSummary" class="section">
+        <div class="section-title">批量运行 ({{ simStore.multiRunResults.length }} 次)</div>
+        <div class="stat-row">
+          <span class="stat-label">平均吞吐量</span>
+          <span class="stat-value">{{ multiRunSummary.avg.toFixed(1) }} 托/时</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">最高</span>
+          <span class="stat-value green">{{ multiRunSummary.max.toFixed(1) }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">最低</span>
+          <span class="stat-value red">{{ multiRunSummary.min.toFixed(1) }}</span>
         </div>
       </div>
 
@@ -222,5 +252,7 @@ function exportReport(): void {
   font-size: 12px;
   cursor: pointer;
 }
+.stat-value.green { color: #00c850; }
+.stat-value.red { color: #e94560; }
 .btn-export:hover { background: #2a4a6a; }
 </style>

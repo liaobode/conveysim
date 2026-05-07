@@ -23,6 +23,22 @@ export class Simulation {
   private tickNumber = 0;
   private simTime = 0;
   private tickDurationSec: number;
+
+  get elapsedTime(): number { return this.simTime; }
+
+  getStats() {
+    const util: Record<string, number> = {};
+    for (const [, c] of this.conveyors) util[c.id] = c.utilization;
+    return {
+      simTime: this.simTime,
+      overallThroughput: this.simTime > 0 ? (this.totalConsumed / this.simTime) * 3600 : 0,
+      conveyorUtilization: util,
+      dwellStats: { ...this.dwellStats },
+      congestionEvents: [...this.congestionEvents],
+      bottleneckId: this.bottleneckId,
+    };
+  }
+
   private running = false;
   private paused = false;
   private timer: ReturnType<typeof setInterval> | null = null;

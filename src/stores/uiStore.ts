@@ -5,6 +5,7 @@ interface UIState {
   dataPanelVisible: boolean;
   saveDialogVisible: boolean;
   loadDialogVisible: boolean;
+  batchDialogVisible: boolean;
   autoSaveTimestamp: number | null;
 }
 
@@ -14,6 +15,7 @@ export const useUIStore = defineStore('ui', {
     dataPanelVisible: false,
     saveDialogVisible: false,
     loadDialogVisible: false,
+    batchDialogVisible: false,
     autoSaveTimestamp: null,
   }),
 
@@ -35,6 +37,12 @@ export const useUIStore = defineStore('ui', {
     },
     closeLoadDialog(): void {
       this.loadDialogVisible = false;
+    },
+    openBatchDialog(): void {
+      this.batchDialogVisible = true;
+    },
+    closeBatchDialog(): void {
+      this.batchDialogVisible = false;
     },
   },
 });

@@ -8,14 +8,25 @@ import PropertyPanel from './components/panels/PropertyPanel.vue';
 import DataPanel from './components/panels/DataPanel.vue';
 import SaveDialog from './components/dialogs/SaveDialog.vue';
 import LoadDialog from './components/dialogs/LoadDialog.vue';
+import BatchDialog from './components/dialogs/BatchDialog.vue';
 import StatusBar from './components/layout/StatusBar.vue';
 
+import { useCanvasStore } from './stores/canvasStore';
+import { useSimulationStore } from './stores/simulationStore';
+
 const uiStore = useUIStore();
+const canvasStore = useCanvasStore();
+const simStore = useSimulationStore();
 const toolbarRef = ref<InstanceType<typeof Toolbar>>();
 
 function onSaveClose(): void {
   uiStore.closeSaveDialog();
   toolbarRef.value?.refreshScenes();
+}
+
+function onBatchStart(rounds: number, timePerRound: number): void {
+  const scene = canvasStore.toJSON();
+  simStore.runBatch(scene, rounds, timePerRound);
 }
 </script>
 
@@ -33,6 +44,7 @@ function onSaveClose(): void {
     <StatusBar />
     <SaveDialog v-if="uiStore.saveDialogVisible" @close="onSaveClose" />
     <LoadDialog v-if="uiStore.loadDialogVisible" @close="uiStore.closeLoadDialog()" />
+    <BatchDialog v-if="uiStore.batchDialogVisible" @close="uiStore.closeBatchDialog()" @start="onBatchStart" />
   </div>
 </template>
 

@@ -2,11 +2,13 @@
 import { computed } from 'vue';
 import { useEditorStore } from '../../stores/editorStore';
 import { useCanvasStore } from '../../stores/canvasStore';
+import { useSimulationStore } from '../../stores/simulationStore';
 import type { ConveyorData, TransferMachineData, ForkliftData } from '../../types';
 import RoutingTable from './RoutingTable.vue';
 
 const editorStore = useEditorStore();
 const canvasStore = useCanvasStore();
+const simStore = useSimulationStore();
 
 type ComponentKind = 'conveyor' | 'transfer' | 'forklift' | null;
 
@@ -66,8 +68,11 @@ function deleteComponent(): void {
   <aside class="property-panel">
     <div class="panel-title">属性</div>
 
+    <!-- 锁定 -->
+    <p v-if="simStore.status !== 'idle' || simStore.multiRunTotal > 0" class="locked">仿真运行中，编辑已锁定</p>
+
     <!-- 未选中 -->
-    <p v-if="selection.kind === null" class="placeholder">选择组件以编辑属性</p>
+    <p v-else-if="selection.kind === null" class="placeholder">选择组件以编辑属性</p>
 
     <!-- 输送机属性 -->
     <div v-if="selection.kind === 'conveyor' && conveyorData" class="form">
@@ -229,6 +234,16 @@ function deleteComponent(): void {
 .placeholder {
   color: #666;
   font-size: 13px;
+}
+
+.locked {
+  color: #e94560;
+  font-size: 13px;
+  padding: 8px;
+  background: #2a1010;
+  border: 1px solid #4a2020;
+  border-radius: 4px;
+  text-align: center;
 }
 
 .form {

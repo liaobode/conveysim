@@ -8,6 +8,9 @@ const simStore = useSimulationStore();
 const editorStore = useEditorStore();
 
 const statusText = computed(() => {
+  if (simStore.multiRunTotal > 0) {
+    return `批量运行: ${simStore.multiRunCurrent}/${simStore.multiRunTotal}`;
+  }
   switch (simStore.status) {
     case 'idle': return '就绪';
     case 'running': return `运行中 — Tick: ${simStore.tickCount} — 托盘: ${Object.keys(simStore.palletStates).length}`;

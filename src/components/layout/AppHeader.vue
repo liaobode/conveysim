@@ -45,6 +45,10 @@ function cycleSpeed(): void {
   simStore.setSpeed(next);
 }
 
+function onBatchRun(): void {
+  uiStore.openBatchDialog();
+}
+
 function setupTestCircuit(): void {
   canvasStore.pushUndoSnapshot();
   canvasStore.clear();
@@ -114,6 +118,13 @@ function setupTestCircuit(): void {
         @click="onStep"
       >&#9654;| 单步</button>
       <button class="btn speed-btn" title="切换速度" @click="cycleSpeed">{{ simStore.speedMultiplier }}x</button>
+      <span class="sep"></span>
+      <button
+        class="btn"
+        :disabled="simStore.status === 'running' && simStore.multiRunTotal === 0"
+        title="批量自动运行"
+        @click="onBatchRun"
+      >&#9654;&#9654; 批量</button>
     </div>
   </header>
 </template>
