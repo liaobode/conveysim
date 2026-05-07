@@ -1,5 +1,78 @@
-# Vue 3 + TypeScript + Vite
+# ConveySim — 物流输送线模拟器
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一款 2D 物流输送线设计与仿真工具。通过拖拽组件搭建输送线方案，运行仿真观察物料流动，分析拥堵点和瓶颈，验证方案在压力下的稳定性。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 解决的问题
+
+在物流仓储方案设计中，输送线是否通畅、是否有瓶颈、能承受多大流量——这些都靠经验估算。ConveySim 让你在方案阶段就用仿真数据验证设计，避免后期返工。
+
+## 核心功能
+
+### 方案搭建
+- **拖拽组件**：从工具栏拖入链式/滚筒输送机、移载机、叉车发生器/消费者
+- **连线连接**：选中模式或连线工具，点击端口建立组件间连接
+- **属性编辑**：选中组件在右侧面板调整长度、速度、波动范围、路由规则等
+- **撤销重做**：Ctrl+Z 回退，最多 50 步
+
+### 仿真运行
+- **单次运行**：启动/暂停/停止/单步推进，可切换 1x/2x/4x 速度
+- **批量运行**：同一场景重复跑 N 轮，每轮独立随机波动，自动收集统计数据
+- **发生器波动**：正态分布随机浮动投放间隔，模拟人工操作快慢（可关闭）
+
+### 堵塞分析
+- **热力图**：输送机利用率从绿（<50%）到黄（50-85%）到红（>85%）实时渲染
+- **瓶颈识别**：自动标记利用率最高的输送段，脉冲高亮
+- **停留时间**：统计每段输送机上托盘的累计等待时长
+- **拥堵事件**：记录每次拥堵的发生位置和时间
+- **批量统计**：多轮运行后展示平均/最高/最低吞吐量
+
+### 场景管理
+- 保存方案到本地（localStorage），支持命名、覆盖、删除
+- 导出为 JSON 文件分享给他人
+- 导入 JSON 文件恢复方案
+- 草稿自动保存，刷新页面后可恢复
+
+## 技术架构
+
+| 层 | 技术 |
+|---|------|
+| 渲染 | PixiJS v7.4（Canvas 2D），分层绘制网格/组件/托盘/热力图 |
+| UI | Vue 3 + TypeScript + Pinia |
+| 仿真引擎 | Web Worker 独立线程，主线程直接回退（解决 Proxy 序列化问题） |
+| 构建 | Vite |
+| 持久化 | localStorage（场景库 + 草稿） + JSON 文件导入导出 |
+
+## 仿真模型
+
+- **输送机**：ZPA 零压力积放模型，等长分段 zone，每 zone 一托盘
+- **移载机**：基于托盘目标标签的路由表，可配置处理时间，可选旋转托盘
+- **叉车**：Box-Muller 正态分布随机投放间隔，3σ 波动范围，最小钳制 20%
+- **拥堵判定**：输送段利用率超过 85% 触发拥堵事件
+
+## 快速开始
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+```
+
+## 操作说明
+
+| 操作 | 方式 |
+|------|------|
+| 拖入组件 | 左侧工具栏按住组件拖到画布 |
+| 移动组件 | 选中后拖动 |
+| 旋转输送机 | 选中后按 R 键（每次 90°） |
+| 连线 | 选连线工具或 S 键，点击起始端口再点目标端口 |
+| 框选 | 按住 Shift 拖拽 |
+| 删除 | 选中后按 Delete |
+| 撤销 | Ctrl+Z |
+| 平移画布 | 鼠标中键拖拽或左键拖空白区域 |
+| 缩放 | 鼠标滚轮 |
+| 启动仿真 | 点击「启动」按钮 |
