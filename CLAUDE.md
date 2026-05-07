@@ -59,7 +59,19 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+## 4. Git 提交规范
+
+**每次 push 到 GitHub 的 commit message 必须描述改动的实际业务逻辑、用途或功能，而非仅罗列技术细节。**
+
+- 好的示例：「用户可以通过批量运行功能对同一场景重复仿真 N 次，系统自动收集每轮的吞吐量和拥堵数据，用于评估方案在随机波动下的稳定性」
+- 坏的示例：「新增 BatchDialog 组件，修改 simulationStore.ts，添加 multiRunResults 字段」
+
+规则：
+- 第一行：简短概括这个改动对用户来说意味着什么（中文）
+- 正文：用 2-5 条说明改动的功能价值，每条从用户视角出发
+- 禁止只写文件名、技术术语堆砌，而不说明业务目的
+
+## 5. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
