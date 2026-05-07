@@ -190,6 +190,7 @@ export const useCanvasStore = defineStore('canvas', {
     },
 
     clear(): void {
+      this.pushUndoSnapshot();
       this.conveyors = {};
       this.transferMachines = {};
       this.forklifts = {};

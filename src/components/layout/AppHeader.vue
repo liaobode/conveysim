@@ -49,6 +49,11 @@ function onBatchRun(): void {
   uiStore.openBatchDialog();
 }
 
+function onClear(): void {
+  if (simStore.status !== 'idle') return;
+  canvasStore.clear();
+}
+
 function setupTestCircuit(): void {
   canvasStore.pushUndoSnapshot();
   canvasStore.clear();
@@ -92,6 +97,12 @@ function setupTestCircuit(): void {
       <button class="btn" title="搭建测试回路" @click="setupTestCircuit">&#9881; 测试</button>
       <button class="btn" title="导入场景" @click="uiStore.openLoadDialog()">&#128193; 导入</button>
       <button class="btn" title="保存场景" @click="uiStore.openSaveDialog()">&#128190; 保存</button>
+      <button
+        class="btn"
+        :disabled="simStore.status !== 'idle'"
+        title="一键清空画布"
+        @click="onClear"
+      >&#128465; 清空</button>
       <span class="sep"></span>
       <button
         class="btn"
