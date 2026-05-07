@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import type { PalletRuntimeState, ConveyorData } from '../../types';
+import type { PalletRuntimeState, ConveyorData, TransferMachineData, ForkliftData } from '../../types';
 import { metersToPixels } from '../../utils/geometry';
 
 export class PalletLayer {
@@ -14,6 +14,8 @@ export class PalletLayer {
   sync(
     palletStates: Record<string, PalletRuntimeState>,
     conveyors: Record<string, ConveyorData>,
+    transfers: Record<string, TransferMachineData>,
+    forklifts: Record<string, ForkliftData>,
   ): void {
     const activeIds = new Set(Object.keys(palletStates));
 
@@ -26,10 +28,7 @@ export class PalletLayer {
     }
 
     for (const [id, state] of Object.entries(palletStates)) {
-      const conveyor = conveyors[state.currentComponentId];
-      if (!conveyor) continue;
-
-      const pos = this.calcWorldPosition(state, conveyor);
+      const pos = this.calcWorldPosition(state, conveyors, transfers, forklifts);
       if (!pos) continue;
 
       let g = this.graphics.get(id);
@@ -58,22 +57,38 @@ export class PalletLayer {
 
   private calcWorldPosition(
     state: PalletRuntimeState,
-    conveyor: ConveyorData,
-  ): { x: number; y: number; rotation: number } | null {
-    const zoneSpacingPx = metersToPixels(conveyor.zoneSpacing);
-    const zoneCount = Math.max(1, Math.floor(conveyor.length / conveyor.zoneSpacing));
-    const totalZoneLen = zoneCount * zoneSpacingPx;
-    const startOffset = -totalZoneLen / 2 + zoneSpacingPx / 2;
+    conveyors: Record<string, ConveyorData>,
+    transfers: Record<string, TransferMachineData>,
+    forklifts: Record<string, ForkliftData>,
+  ): { x: number; y: number } | null {
+    const conveyor = conveyors[state.currentComponentId];
+    if (conveyor) {
+      const zoneSpacingPx = metersToPixels(conveyor.zoneSpacing);
+      const zoneCount = Math.max(1, Math.floor(conveyor.length / conveyor.zoneSpacing));
+      const totalZoneLen = zoneCount * zoneSpacingPx;
+      const startOffset = -totalZoneLen / 2 + zoneSpacingPx / 2;
 
-    const localX = startOffset + state.currentZoneIndex * zoneSpacingPx + state.progressInZone * zoneSpacingPx;
+      const localX = startOffset + state.currentZoneIndex * zoneSpacingPx + state.progressInZone * zoneSpacingPx;
 
-    const cos = Math.cos(conveyor.rotation);
-    const sin = Math.sin(conveyor.rotation);
+      const cos = Math.cos(conveyor.rotation);
+      const sin = Math.sin(conveyor.rotation);
 
-    return {
-      x: conveyor.x + localX * cos,
-      y: conveyor.y + localX * sin,
-      rotation: conveyor.rotation,
-    };
+      return {
+        x: conveyor.x + localX * cos,
+        y: conveyor.y + localX * sin,
+      };
+    }
+
+    const transfer = transfers[state.currentComponentId];
+    if (transfer) {
+      return { x: transfer.x, y: transfer.y };
+    }
+
+    const forklift = forklifts[state.currentComponentId];
+    if (forklift) {
+      return { x: forklift.x, y: forklift.y };
+    }
+
+    return null;
   }
 }

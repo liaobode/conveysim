@@ -111,6 +111,7 @@ export class SnapManager {
       if (target) {
         // 确保没有重复连接
         if (!this.hasConnection(id, target)) {
+          this.canvasStore.pushUndoSnapshot();
           const connId = this.canvasStore.addConnection(
             id.componentId,
             id.portName,
@@ -222,6 +223,7 @@ export class SnapManager {
       nearest.portId.componentId, nearest.portId.portName,
     )) {
       if (!this.hasConnection(this.wireStartPort, nearest.portId)) {
+        this.canvasStore.pushUndoSnapshot();
         const connId = this.canvasStore.addConnection(
           this.wireStartPort.componentId, this.wireStartPort.portName,
           nearest.portId.componentId, nearest.portId.portName,

@@ -222,11 +222,27 @@ export class SelectionManager {
       const g = this.canvasManager.conveyorLayer.getGraphic(c.id);
       if (g) g.setHighlight(ids.has(c.id));
     }
+    for (const t of this.canvasStore.transferList) {
+      const g = this.canvasManager.componentLayer.getTransfer(t.id);
+      if (g) g.setHighlight(ids.has(t.id));
+    }
+    for (const f of this.canvasStore.forkliftList) {
+      const g = this.canvasManager.componentLayer.getForklift(f.id);
+      if (g) g.setHighlight(ids.has(f.id));
+    }
   }
 
   private clearHighlights(): void {
     for (const c of this.canvasStore.conveyorList) {
       const g = this.canvasManager.conveyorLayer.getGraphic(c.id);
+      if (g) g.setHighlight(false);
+    }
+    for (const t of this.canvasStore.transferList) {
+      const g = this.canvasManager.componentLayer.getTransfer(t.id);
+      if (g) g.setHighlight(false);
+    }
+    for (const f of this.canvasStore.forkliftList) {
+      const g = this.canvasManager.componentLayer.getForklift(f.id);
       if (g) g.setHighlight(false);
     }
   }
