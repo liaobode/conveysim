@@ -210,9 +210,11 @@ export class SelectionManager {
     if (this.canvasStore.conveyors[id]) {
       this.canvasStore.updateConveyor(id, patch);
     } else if (this.canvasStore.transferMachines[id]) {
-      this.canvasStore.updateTransfer(id, patch as any);
+      const { x, y } = patch;
+      this.canvasStore.updateTransfer(id, { x, y });
     } else if (this.canvasStore.forklifts[id]) {
-      this.canvasStore.updateForklift(id, patch as any);
+      const { x, y } = patch;
+      this.canvasStore.updateForklift(id, { x, y });
     }
   }
 

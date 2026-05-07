@@ -81,7 +81,7 @@ function setupTestCircuit(): void {
   canvasStore.addConnection(genId, 'output', conv1Id, 'input');
   canvasStore.addConnection(conv1Id, 'output', transId, 'west');
   canvasStore.addConnection(transId, 'south', conv2Id, 'input');
-  canvasStore.addConnection(conv2Id, 'output', consId, 'output');
+  canvasStore.addConnection(conv2Id, 'output', consId, 'input');
 }
 </script>
 

@@ -1,9 +1,9 @@
-import type { MainToWorkerMessage } from '../types';
+import type { MainToWorkerMessage, WorkerToMainMessage } from '../types';
 import { Simulation } from './Simulation';
 
 let simulation: Simulation | null = null;
 
-function postMsg(msg: any): void {
+function postMsg(msg: WorkerToMainMessage): void {
   (self as any).postMessage(msg);
 }
 

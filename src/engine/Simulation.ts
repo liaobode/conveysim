@@ -1,4 +1,4 @@
-import type { SceneJSON, ZoneState, PalletRuntimeState, TransferRuntimeState } from '../types';
+import type { SceneJSON, ZoneState, PalletRuntimeState, TransferRuntimeState, FrameUpdatePayload, StatisticsPayload, SimulationEvent, SimulationEventType } from '../types';
 import { ConveyorModel } from './ConveyorModel';
 import { TransferModel } from './TransferModel';
 import { ForkliftModel } from './ForkliftModel';
@@ -58,15 +58,15 @@ export class Simulation {
   private bottleneckId: string | null = null;
 
   // 回调
-  private onFrameUpdate?: (payload: any) => void;
-  private onStatistics?: (payload: any) => void;
-  private onEvent?: (payload: any) => void;
+  private onFrameUpdate?: (payload: FrameUpdatePayload) => void;
+  private onStatistics?: (payload: StatisticsPayload) => void;
+  private onEvent?: (payload: SimulationEvent) => void;
 
   constructor(
     callbacks: {
-      onFrameUpdate: (p: any) => void;
-      onStatistics: (p: any) => void;
-      onEvent: (p: any) => void;
+      onFrameUpdate: (p: FrameUpdatePayload) => void;
+      onStatistics: (p: StatisticsPayload) => void;
+      onEvent: (p: SimulationEvent) => void;
     },
   ) {
     this.onFrameUpdate = callbacks.onFrameUpdate;
@@ -420,7 +420,7 @@ export class Simulation {
   }
 
   private emitEvent(
-    eventType: string,
+    eventType: SimulationEventType,
     componentId: string,
     palletId?: string,
     detail?: string,

@@ -63,8 +63,9 @@ export class SnapManager {
 
     const forklift = this.canvasStore.forklifts[componentId];
     if (forklift) {
+      const portName = forklift.role === 'consumer' ? 'input' : 'output';
       ports.push({
-        id: { componentId: forklift.id, portName: 'output' },
+        id: { componentId: forklift.id, portName },
         geometry: { worldX: forklift.x + 26, worldY: forklift.y, normalAngle: 0 },
       });
       return ports;
@@ -112,12 +113,11 @@ export class SnapManager {
         // 确保没有重复连接
         if (!this.hasConnection(id, target)) {
           this.canvasStore.pushUndoSnapshot();
-          const connId = this.canvasStore.addConnection(
-            id.componentId,
-            id.portName,
-            target.componentId,
-            target.portName,
-          );
+          // input 端口作为连接目标（如消费者接收托盘），方向反转
+          const [fromComp, fromPort, toComp, toPort] = id.portName === 'input'
+            ? [target.componentId, target.portName, id.componentId, id.portName]
+            : [id.componentId, id.portName, target.componentId, target.portName];
+          const connId = this.canvasStore.addConnection(fromComp, fromPort, toComp, toPort);
           created.push(connId);
         }
       }
@@ -142,8 +142,10 @@ export class SnapManager {
     if (fromConv && toTrans) return true;
     if (fromTrans && toConv) return true;
 
-    // 叉车 → 输送机
+    // 叉车 → 输送机（generator 输出到输送机）
     if (this.canvasStore.forklifts[fromComp] && toConv) return true;
+    // 输送机 → 叉车（输送机输出到 consumer 输入）
+    if (fromConv && this.canvasStore.forklifts[toComp]) return true;
 
     return false;
   }
@@ -224,10 +226,13 @@ export class SnapManager {
     )) {
       if (!this.hasConnection(this.wireStartPort, nearest.portId)) {
         this.canvasStore.pushUndoSnapshot();
-        const connId = this.canvasStore.addConnection(
-          this.wireStartPort.componentId, this.wireStartPort.portName,
-          nearest.portId.componentId, nearest.portId.portName,
-        );
+        // input 端口作为连接目标，方向反转
+        const startPort = this.wireStartPort!;
+        const endPort = nearest.portId;
+        const [fromComp, fromPort, toComp, toPort] = startPort.portName === 'input'
+          ? [endPort.componentId, endPort.portName, startPort.componentId, startPort.portName]
+          : [startPort.componentId, startPort.portName, endPort.componentId, endPort.portName];
+        const connId = this.canvasStore.addConnection(fromComp, fromPort, toComp, toPort);
         this.cancelWire();
         return connId;
       }
