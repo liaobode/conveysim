@@ -6,6 +6,10 @@ import { useSimulationStore } from '../../stores/simulationStore';
 import type { ConveyorData, TransferMachineData, ForkliftData } from '../../types';
 import RoutingTable from './RoutingTable.vue';
 
+function clamp(v: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, v));
+}
+
 const editorStore = useEditorStore();
 const canvasStore = useCanvasStore();
 const simStore = useSimulationStore();
@@ -83,24 +87,24 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="conveyorData.length"
-        min="0.5" step="0.5"
-        @change="updateConveyor({ length: +($event.target as HTMLInputElement).value })"
+        min="0.5" max="100" step="0.5"
+        @change="updateConveyor({ length: clamp(+($event.target as HTMLInputElement).value, 0.5, 100) })"
       />
 
       <label>宽度 (米)</label>
       <input
         type="number"
         :value="conveyorData.width"
-        min="0.2" step="0.1"
-        @change="updateConveyor({ width: +($event.target as HTMLInputElement).value })"
+        min="0.2" max="5" step="0.1"
+        @change="updateConveyor({ width: clamp(+($event.target as HTMLInputElement).value, 0.2, 5) })"
       />
 
       <label>速度 (米/秒)</label>
       <input
         type="number"
         :value="conveyorData.speed"
-        min="0.1" step="0.1"
-        @change="updateConveyor({ speed: +($event.target as HTMLInputElement).value })"
+        min="0.1" max="10" step="0.1"
+        @change="updateConveyor({ speed: clamp(+($event.target as HTMLInputElement).value, 0.1, 10) })"
       />
 
       <label>方向</label>
@@ -116,8 +120,8 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="conveyorData.zoneSpacing"
-        min="0.5" step="0.1"
-        @change="updateConveyor({ zoneSpacing: +($event.target as HTMLInputElement).value })"
+        min="0.5" :max="conveyorData.length" step="0.1"
+        @change="updateConveyor({ zoneSpacing: clamp(+($event.target as HTMLInputElement).value, 0.5, conveyorData.length) })"
       />
     </div>
 
@@ -127,8 +131,8 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="transferData.actionTime"
-        min="0.5" step="0.5"
-        @change="updateTransfer({ actionTime: +($event.target as HTMLInputElement).value })"
+        min="0.5" max="60" step="0.5"
+        @change="updateTransfer({ actionTime: clamp(+($event.target as HTMLInputElement).value, 0.5, 60) })"
       />
 
       <label>默认路由</label>
@@ -164,8 +168,8 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="forkliftData.interval"
-        min="1" step="1"
-        @change="updateForklift({ interval: +($event.target as HTMLInputElement).value })"
+        min="1" max="3600" step="1"
+        @change="updateForklift({ interval: clamp(+($event.target as HTMLInputElement).value, 1, 3600) })"
       />
 
       <label>波动范围</label>
@@ -192,16 +196,16 @@ function deleteComponent(): void {
       <input
         type="number"
         :value="forkliftData.palletSize.width"
-        min="0.4" step="0.1"
-        @change="updateForklift({ palletSize: { ...forkliftData.palletSize, width: +($event.target as HTMLInputElement).value } })"
+        min="0.4" max="5" step="0.1"
+        @change="updateForklift({ palletSize: { ...forkliftData.palletSize, width: clamp(+($event.target as HTMLInputElement).value, 0.4, 5) } })"
       />
 
       <label>托盘宽 (米)</label>
       <input
         type="number"
         :value="forkliftData.palletSize.height"
-        min="0.4" step="0.1"
-        @change="updateForklift({ palletSize: { ...forkliftData.palletSize, height: +($event.target as HTMLInputElement).value } })"
+        min="0.4" max="5" step="0.1"
+        @change="updateForklift({ palletSize: { ...forkliftData.palletSize, height: clamp(+($event.target as HTMLInputElement).value, 0.4, 5) } })"
       />
     </div>
 

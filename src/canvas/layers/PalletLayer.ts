@@ -42,13 +42,30 @@ export class PalletLayer {
       const h = metersToPixels(state.size.height);
       g.clear();
       const blocked = state.isBlocked;
-      g.lineStyle(2, blocked ? 0xff0040 : 0xffaa00, 1);
-      g.beginFill(blocked ? 0x801020 : 0xc89030, 0.9);
+      const reverse = state.reverseFlow;
+
+      // 边框和填充颜色
+      const borderColor = blocked ? 0xff0040 : reverse ? 0x00ccff : 0xffaa00;
+      const fillColor = blocked ? 0x801020 : reverse ? 0x00334a : 0xc89030;
+      const innerColor = blocked ? 0xff2040 : reverse ? 0x00eeff : 0xe0a840;
+
+      g.lineStyle(2, borderColor, 1);
+      g.beginFill(fillColor, 0.9);
       g.drawRect(-w / 2, -h / 2, w, h);
       g.endFill();
-      g.beginFill(blocked ? 0xff2040 : 0xe0a840, 0.7);
+      g.beginFill(innerColor, 0.7);
       g.drawRect(-w / 4, -h / 4, w / 2, h / 2);
       g.endFill();
+
+      // 逆流方向箭头
+      if (reverse) {
+        g.beginFill(0xffffff, 0.8);
+        g.moveTo(w / 4, 0);
+        g.lineTo(-w / 4, -h / 4);
+        g.lineTo(-w / 4, h / 4);
+        g.closePath();
+        g.endFill();
+      }
 
       g.position.set(pos.x, pos.y);
       g.rotation = state.worldRotation;

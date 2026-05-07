@@ -7,6 +7,7 @@ import type {
   SceneJSON,
 } from '../types';
 import { Simulation } from '../engine/Simulation';
+import { useUIStore } from './uiStore';
 
 type SimStatus = 'idle' | 'running' | 'paused';
 
@@ -95,13 +96,13 @@ export const useSimulationStore = defineStore('simulation', {
         console.log('[Store] Worker created at:', url.href);
 
         this.worker.onerror = (e: ErrorEvent) => {
-          console.error('[Store] Worker error:', e.message, '- falling back');
+          useUIStore().addToast('Worker 错误: ' + e.message + '，已回退到主线程', 'error');
           cancelFallback();
           this.fallbackToDirect(scene, tickIntervalMs);
         };
 
         this.worker.onmessageerror = () => {
-          console.error('[Store] Worker message error - falling back');
+          useUIStore().addToast('Worker 消息错误，已回退到主线程', 'error');
           cancelFallback();
           this.fallbackToDirect(scene, tickIntervalMs);
         };
@@ -136,11 +137,11 @@ export const useSimulationStore = defineStore('simulation', {
               break;
             case 'SIMULATION_EVENT':
               if (msg.payload.eventType === 'ERROR') {
-                console.error('[Sim]', msg.payload.detail);
+                useUIStore().addToast('仿真异常: ' + (msg.payload.detail || '未知错误'), 'error');
               }
               break;
             case 'ERROR':
-              console.error('[Store] Sim error:', msg.message);
+              useUIStore().addToast('仿真错误: ' + msg.message, 'error');
               break;
           }
         };
@@ -154,13 +155,13 @@ export const useSimulationStore = defineStore('simulation', {
 
         // 如果 1 秒内 Worker 没有任何响应，回退到主线程
         fallbackTimer = setTimeout(() => {
-          console.warn('[Store] Worker no response in 1s, falling back to direct');
+          useUIStore().addToast('Worker 超时无响应，已回退到主线程', 'warn');
           fallbackTimer = null;
           this.fallbackToDirect(scene, tickIntervalMs);
         }, 1000);
 
       } catch (err: any) {
-        console.warn('[Store] Worker creation failed:', err.message, '- using direct mode');
+        useUIStore().addToast('Worker 创建失败: ' + err.message + '，使用主线程模式', 'warn');
         this.fallbackToDirect(scene, tickIntervalMs);
       }
 

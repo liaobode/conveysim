@@ -1,5 +1,13 @@
 import { defineStore } from 'pinia';
 
+export type ToastType = 'error' | 'warn' | 'info';
+
+interface ToastItem {
+  id: number;
+  message: string;
+  type: ToastType;
+}
+
 interface UIState {
   propertyPanelVisible: boolean;
   dataPanelVisible: boolean;
@@ -7,6 +15,7 @@ interface UIState {
   loadDialogVisible: boolean;
   batchDialogVisible: boolean;
   autoSaveTimestamp: number | null;
+  toasts: ToastItem[];
 }
 
 export const useUIStore = defineStore('ui', {
@@ -17,6 +26,7 @@ export const useUIStore = defineStore('ui', {
     loadDialogVisible: false,
     batchDialogVisible: false,
     autoSaveTimestamp: null,
+    toasts: [],
   }),
 
   actions: {
@@ -43,6 +53,16 @@ export const useUIStore = defineStore('ui', {
     },
     closeBatchDialog(): void {
       this.batchDialogVisible = false;
+    },
+    addToast(message: string, type: ToastType): void {
+      const id = Date.now();
+      this.toasts.push({ id, message, type });
+      setTimeout(() => {
+        this.toasts = this.toasts.filter((t) => t.id !== id);
+      }, 5000);
+    },
+    removeToast(id: number): void {
+      this.toasts = this.toasts.filter((t) => t.id !== id);
     },
   },
 });

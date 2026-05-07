@@ -318,6 +318,7 @@ export class Simulation {
         isBlocked: p.isBlocked,
         size: { ...p.size },
         worldRotation: p.worldRotation,
+        reverseFlow: p._reverseFlow,
       });
     }
 

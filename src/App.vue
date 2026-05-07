@@ -10,6 +10,7 @@ import SaveDialog from './components/dialogs/SaveDialog.vue';
 import LoadDialog from './components/dialogs/LoadDialog.vue';
 import BatchDialog from './components/dialogs/BatchDialog.vue';
 import StatusBar from './components/layout/StatusBar.vue';
+import SimToast from './components/layout/SimToast.vue';
 
 import { useCanvasStore } from './stores/canvasStore';
 import { useSimulationStore } from './stores/simulationStore';
@@ -45,6 +46,7 @@ function onBatchStart(rounds: number, timePerRound: number): void {
     <SaveDialog v-if="uiStore.saveDialogVisible" @close="onSaveClose" />
     <LoadDialog v-if="uiStore.loadDialogVisible" @close="uiStore.closeLoadDialog()" />
     <BatchDialog v-if="uiStore.batchDialogVisible" @close="uiStore.closeBatchDialog()" @start="onBatchStart" />
+    <SimToast />
   </div>
 </template>
 

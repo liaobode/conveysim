@@ -54,3 +54,61 @@ export function normalizeAngle(angle: number): number {
   const twoPI = Math.PI * 2;
   return ((angle % twoPI) + twoPI) % twoPI;
 }
+
+export interface Bounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/** 计算旋转矩形的轴对齐包围盒 */
+function rotatedRectBounds(
+  cx: number, cy: number, hw: number, hh: number, angle: number,
+): Bounds {
+  const cos = Math.abs(Math.cos(angle));
+  const sin = Math.abs(Math.sin(angle));
+  const halfSpanX = hw * cos + hh * sin;
+  const halfSpanY = hw * sin + hh * cos;
+  return {
+    minX: cx - halfSpanX,
+    minY: cy - halfSpanY,
+    maxX: cx + halfSpanX,
+    maxY: cy + halfSpanY,
+  };
+}
+
+/** 计算所有组件的包围盒（世界坐标） */
+export function computeComponentsBounds(
+  conveyors: { x: number; y: number; rotation: number; length: number; width: number }[],
+  transfers: { x: number; y: number }[],
+  forklifts: { x: number; y: number }[],
+): Bounds {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  for (const c of conveyors) {
+    const lenPx = metersToPixels(c.length);
+    const wPx = metersToPixels(c.width);
+    const b = rotatedRectBounds(c.x, c.y, lenPx / 2, wPx / 2, c.rotation);
+    minX = Math.min(minX, b.minX);
+    minY = Math.min(minY, b.minY);
+    maxX = Math.max(maxX, b.maxX);
+    maxY = Math.max(maxY, b.maxY);
+  }
+
+  for (const t of transfers) {
+    minX = Math.min(minX, t.x - 25);
+    minY = Math.min(minY, t.y - 25);
+    maxX = Math.max(maxX, t.x + 25);
+    maxY = Math.max(maxY, t.y + 25);
+  }
+
+  for (const f of forklifts) {
+    minX = Math.min(minX, f.x - 20);
+    minY = Math.min(minY, f.y - 15);
+    maxX = Math.max(maxX, f.x + 20);
+    maxY = Math.max(maxY, f.y + 15);
+  }
+
+  return { minX, minY, maxX, maxY };
+}

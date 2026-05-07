@@ -12,4 +12,5 @@ export interface PalletRuntimeState {
   isBlocked: boolean;
   size: { width: number; height: number };
   worldRotation: number;
+  reverseFlow: boolean;
 }

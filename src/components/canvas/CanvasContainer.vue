@@ -5,7 +5,7 @@ import { useCanvasStore } from '../../stores/canvasStore';
 import { useEditorStore } from '../../stores/editorStore';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { handleCanvasDrop } from '../../canvas/interactions/DragFromToolbar';
-import { screenToWorld } from '../../utils/geometry';
+import { screenToWorld, computeComponentsBounds } from '../../utils/geometry';
 import { saveDraft, loadDraft } from '../../utils/persistence';
 
 const canvasHost = ref<HTMLDivElement>();
@@ -147,6 +147,40 @@ function onDrop(e: DragEvent): void {
   canvasManager.refreshComponents();
 }
 
+function zoomToFit(): void {
+  const host = canvasHost.value;
+  if (!host || !canvasManager) return;
+
+  const bounds = computeComponentsBounds(
+    canvasStore.conveyorList,
+    canvasStore.transferList,
+    canvasStore.forkliftList,
+  );
+
+  if (bounds.minX === Infinity) {
+    editorStore.setViewport(0, 0, 1);
+    canvasManager.syncViewport();
+    return;
+  }
+
+  const PADDING = 60;
+  const contentW = bounds.maxX - bounds.minX + PADDING * 2;
+  const contentH = bounds.maxY - bounds.minY + PADDING * 2;
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const canvasW = host.clientWidth;
+  const canvasH = host.clientHeight;
+
+  const scaleX = canvasW / contentW;
+  const scaleY = canvasH / contentH;
+  const newScale = Math.max(0.1, Math.min(5, Math.min(scaleX, scaleY)));
+  const newX = canvasW / 2 - centerX * newScale;
+  const newY = canvasH / 2 - centerY * newScale;
+
+  editorStore.setViewport(newX, newY, newScale);
+  canvasManager.syncViewport();
+}
+
 function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Shift') {
     editorStore.shiftHeld = true;
@@ -246,7 +280,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="canvasHost" class="canvas-host" @dragover="onDragOver" @drop="onDrop"></div>
+  <div ref="canvasHost" class="canvas-host" @dragover="onDragOver" @drop="onDrop">
+    <button class="zoom-fit-btn" title="缩放至全部组件" @click.stop="zoomToFit">&#9744;</button>
+  </div>
 </template>
 
 <style scoped>
@@ -255,5 +291,26 @@ onUnmounted(() => {
   background: #0a0a1a;
   overflow: hidden;
   position: relative;
+}
+
+.zoom-fit-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 26px;
+}
+
+.zoom-fit-btn:hover {
+  background: #0f3460;
 }
 </style>
