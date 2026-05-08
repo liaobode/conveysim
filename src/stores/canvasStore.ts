@@ -145,18 +145,21 @@ export const useCanvasStore = defineStore('canvas', {
     updateConveyor(id: string, patch: Partial<ConveyorData>): void {
       if (this.conveyors[id]) {
         Object.assign(this.conveyors[id], patch);
+        this.version++;
       }
     },
 
     updateTransfer(id: string, patch: Partial<TransferMachineData>): void {
       if (this.transferMachines[id]) {
         Object.assign(this.transferMachines[id], patch);
+        this.version++;
       }
     },
 
     updateForklift(id: string, patch: Partial<ForkliftData>): void {
       if (this.forklifts[id]) {
         Object.assign(this.forklifts[id], patch);
+        this.version++;
       }
     },
 

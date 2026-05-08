@@ -45,28 +45,29 @@ function makeForkliftData(overrides: Partial<ForkliftData> = {}): ForkliftData {
 }
 
 describe('ForkliftModel', () => {
-  it('fires action on first tick (cooldown starts at 0)', () => {
-    const model = new ForkliftModel(makeForkliftData());
-    const action = model.tick(0.05);
-    expect(action).toBe('generate');
-    // 触发后冷却被重置
-    expect(model.remainingCooldown).toBeGreaterThan(0);
+  it('cooldown counts down before first action', () => {
+    const model = new ForkliftModel(makeForkliftData({ interval: 2 }));
+    // 初始冷却未结束，不触发
+    expect(model.tick(1.0)).toBeNull();
+    // 冷却完毕，触发
+    expect(model.tick(1.1)).toBe('generate');
+    expect(model.remainingCooldown).toBeGreaterThan(0); // 已重置
   });
 
   it('waits for cooldown before next action', () => {
     const model = new ForkliftModel(makeForkliftData({ interval: 2 }));
-    // 第一次 tick 立即触发
-    expect(model.tick(0.05)).toBe('generate');
+    // 推进冷却完毕
+    model.tick(2.1); // 首次触发 + 重置
     // 冷却中
-    expect(model.tick(0.05)).toBeNull();
-    expect(model.tick(0.05)).toBeNull();
+    expect(model.tick(1.0)).toBeNull();
+    expect(model.tick(0.5)).toBeNull();
   });
 
   it('fires again after cooldown elapses', () => {
     const model = new ForkliftModel(makeForkliftData({ interval: 2 }));
-    model.tick(0.05); // 首次触发，reset cooldown to ~2s
+    model.tick(2.0); // 首次触发，cooldown reset to ~2s
     // 推进大量时间以耗尽冷却
-    expect(model.tick(2.0)).toBe('generate');
+    expect(model.tick(2.1)).toBe('generate');
   });
 
   it('returns null during cooldown', () => {
@@ -91,8 +92,11 @@ describe('ForkliftModel', () => {
     expect(unique.size).toBeGreaterThan(1);
   });
 
-  it('consumer returns consume action', () => {
-    const model = new ForkliftModel(makeForkliftData({ role: 'consumer' }));
-    expect(model.tick(0.05)).toBe('consume');
+  it('consumer requires cooldown before first consume', () => {
+    const model = new ForkliftModel(makeForkliftData({ role: 'consumer', interval: 2 }));
+    // 消费者初始 cooldown = interval，首次 tick 不会触发
+    expect(model.tick(0.05)).toBeNull();
+    // 推进到冷却完毕
+    expect(model.tick(2.0)).toBe('consume');
   });
 });

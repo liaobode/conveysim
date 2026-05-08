@@ -47,7 +47,7 @@ describe('ConveyorModel', () => {
     const results = conv.movePallets(1.5);
     expect(results.length).toBe(0); // 还没到末端
     expect(pallet.currentZoneIndex).toBe(1);
-    expect(pallet.progressInZone).toBe(0);
+    expect(pallet.progressInZone).toBeCloseTo(0.5, 1); // 起点从 0.5 开始
     expect(conv.zones[1].occupied).toBe(true);
     expect(conv.zones[0].occupied).toBe(false);
   });

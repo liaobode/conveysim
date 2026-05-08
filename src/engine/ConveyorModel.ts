@@ -62,7 +62,7 @@ export class ConveyorModel {
     this.zones[idx].occupiedByPalletId = pallet.id;
     pallet.currentComponentId = this.id;
     pallet.currentZoneIndex = idx;
-    pallet.progressInZone = 0;
+    pallet.progressInZone = 0.5; // 直接出现在分区中央，而非从边缘滑入
     pallet.isBlocked = false;
     pallet.enterTime = simTime;
     this.pallets.push(pallet);

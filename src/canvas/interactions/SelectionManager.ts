@@ -31,10 +31,16 @@ export class SelectionManager {
   }
 
   /** mousedown：选中 + 开始拖拽 */
-  handleMouseDown(worldX: number, worldY: number): string | null {
+  handleMouseDown(worldX: number, worldY: number, locked = false): string | null {
     const { id } = this.findHitStrict(worldX, worldY);
 
     if (id) {
+      if (locked) {
+        // 仿真锁定：只选中查看，不拖拽不高亮不保存快照
+        this.editorStore.selectComponent(id);
+        return id;
+      }
+
       // 保存快照用于撤销
       this.canvasStore.pushUndoSnapshot();
 
@@ -80,15 +86,6 @@ export class SelectionManager {
     const wasDragging = this.isDragging;
     if (this.isDragging) {
       this.isDragging = false;
-      // 只有真正移动后才触发自动连接（避免点击就乱连）
-      if (this.hasMoved) {
-        for (const target of this.dragTargets) {
-          const created = this.canvasManager.snap.autoConnect(target.id);
-          if (created.length > 0) {
-            this.canvasManager.refreshConveyors();
-          }
-        }
-      }
       this.hasMoved = false;
       this.dragTargets = [];
     }

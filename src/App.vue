@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUIStore } from './stores/uiStore';
 import AppHeader from './components/layout/AppHeader.vue';
 import Toolbar from './components/layout/Toolbar.vue';
@@ -30,6 +30,27 @@ function onBatchStart(rounds: number, timePerRound: number): void {
   const scene = canvasStore.toJSON();
   simStore.runBatch(scene, rounds, timePerRound);
 }
+
+const hasComponents = computed(() =>
+  canvasStore.conveyorList.length > 0 ||
+  canvasStore.transferList.length > 0 ||
+  canvasStore.forkliftList.length > 0,
+);
+
+function onBeforeUnload(e: BeforeUnloadEvent): void {
+  if (hasComponents.value) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload);
+});
 
 // 可拖拽面板宽度
 const toolbarWidth = ref(140);

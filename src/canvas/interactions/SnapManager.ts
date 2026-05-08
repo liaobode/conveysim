@@ -220,7 +220,47 @@ export class SnapManager {
   updateWire(wx: number, wy: number): void {
     if (!this.wireActive) return;
     this.wireCurrentPos = { x: wx, y: wy };
-    this.drawPreview();
+    // 检测当前端口是否合法，非法用红色预览
+    let valid = true;
+    if (this.wireStartPort) {
+      const nearest = this.findNearestPort(wx, wy, this.wireStartPort.componentId);
+      if (nearest) {
+        valid = this.canConnect(
+          this.wireStartPort.componentId, this.wireStartPort.portName,
+          nearest.portId.componentId, nearest.portId.portName,
+        );
+      }
+    }
+    this.drawPreview(valid);
+  }
+
+  private drawPreview(valid = true): void {
+    if (!this.wireContainer) return;
+    if (!this.wirePreview) {
+      this.wirePreview = new PIXI.Graphics();
+      this.wireContainer.addChild(this.wirePreview);
+    }
+    this.wirePreview.clear();
+    if (!this.wireStartPos) return;
+
+    const color = valid ? 0x4ae04a : 0xe94560;
+    const alpha = valid ? 0.8 : 0.9;
+
+    // 起始端口圆圈
+    this.wirePreview.lineStyle(0);
+    this.wirePreview.beginFill(color, alpha);
+    this.wirePreview.drawCircle(this.wireStartPos.x, this.wireStartPos.y, 6);
+    this.wirePreview.endFill();
+
+    // 预览线
+    this.wirePreview.lineStyle(2, color, alpha);
+    this.wirePreview.moveTo(this.wireStartPos.x, this.wireStartPos.y);
+    this.wirePreview.lineTo(this.wireCurrentPos.x, this.wireCurrentPos.y);
+
+    // 当前位置圆圈
+    this.wirePreview.beginFill(color, 0.4);
+    this.wirePreview.drawCircle(this.wireCurrentPos.x, this.wireCurrentPos.y, 6);
+    this.wirePreview.endFill();
   }
 
   /** 完成连线：释放到第二个端口 */
@@ -261,32 +301,6 @@ export class SnapManager {
     this.clearPreview();
   }
 
-  private drawPreview(): void {
-    if (!this.wireContainer) return;
-    if (!this.wirePreview) {
-      this.wirePreview = new PIXI.Graphics();
-      this.wireContainer.addChild(this.wirePreview);
-    }
-    this.wirePreview.clear();
-    if (!this.wireStartPos) return;
-
-    // 起始端口圆圈
-    this.wirePreview.lineStyle(0);
-    this.wirePreview.beginFill(0x4ae04a, 0.8);
-    this.wirePreview.drawCircle(this.wireStartPos.x, this.wireStartPos.y, 6);
-    this.wirePreview.endFill();
-
-    // 预览线
-    this.wirePreview.lineStyle(2, 0x4ae04a, 0.6);
-    this.wirePreview.moveTo(this.wireStartPos.x, this.wireStartPos.y);
-    this.wirePreview.lineTo(this.wireCurrentPos.x, this.wireCurrentPos.y);
-
-    // 当前位置圆圈
-    this.wirePreview.beginFill(0x4ae04a, 0.4);
-    this.wirePreview.drawCircle(this.wireCurrentPos.x, this.wireCurrentPos.y, 6);
-    this.wirePreview.endFill();
-  }
-
   private clearPreview(): void {
     if (this.wirePreview) {
       this.wirePreview.clear();
@@ -302,7 +316,7 @@ export class SnapManager {
 
   /** 检测点击是否命中连线端点（返回连接 ID） */
   hitTestConnection(wx: number, wy: number): string | null {
-    const threshold = 8;
+    const threshold = 12;
     for (const conn of Object.values(this.canvasStore.connections)) {
       const fromPort = this.getPortPos(conn.from.componentId, conn.from.portName);
       const toPort = this.getPortPos(conn.to.componentId, conn.to.portName);

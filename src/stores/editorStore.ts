@@ -78,8 +78,9 @@ export const useEditorStore = defineStore('editor', {
     },
 
     selectConnection(id: string | null): void {
+      this.selectedComponentId = null;
+      this.selectedComponentIds = [];
       this.selectedConnectionId = id;
-      this.deselectAll();
     },
 
     setViewport(x: number, y: number, scale: number): void {

@@ -38,7 +38,6 @@ let isRubberBand = false;
 let rubberStart = { x: 0, y: 0 };
 
 function onMouseDown(e: MouseEvent): void {
-  if (editingLocked() && e.button !== 1) return;
   if (e.button === 1) {
     e.preventDefault();
     startPan(e);
@@ -48,15 +47,17 @@ function onMouseDown(e: MouseEvent): void {
   if (e.button === 0 && canvasManager) {
     const pos = getWorldPos(e);
     if (editorStore.activeTool === 'wire') {
+      if (editingLocked()) return;
       canvasManager.snap.startWire(pos.x, pos.y);
       return;
     }
     const connId = canvasManager.snap.hitTestConnection(pos.x, pos.y);
     if (connId) {
       editorStore.selectConnection(connId);
+      canvasManager?.refreshConveyors();
       return;
     }
-    const hitId = canvasManager.selection.handleMouseDown(pos.x, pos.y);
+    const hitId = canvasManager.selection.handleMouseDown(pos.x, pos.y, editingLocked());
 
     if (!hitId) {
       if (editorStore.shiftHeld) {
@@ -74,12 +75,16 @@ function startPan(e: MouseEvent): void {
   isPanning = true;
   panStart = { x: e.clientX, y: e.clientY };
   panViewStart = { ...editorStore.viewport };
+  panMoved = false;
 }
+
+let panMoved = false;
 
 function onMouseMove(e: MouseEvent): void {
   if (isPanning) {
     const dx = e.clientX - panStart.x;
     const dy = e.clientY - panStart.y;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) panMoved = true;
     editorStore.setViewport(panViewStart.x + dx, panViewStart.y + dy, editorStore.viewport.scale);
     canvasManager?.syncViewport();
     return;
@@ -116,7 +121,9 @@ function onMouseMove(e: MouseEvent): void {
       }
     } else {
       canvasManager.conveyorLayer.clearPortHighlight();
-      canvasManager.selection.handleMouseMove(pos.x, pos.y);
+      if (!editingLocked()) {
+        canvasManager.selection.handleMouseMove(pos.x, pos.y);
+      }
     }
   }
 
@@ -155,6 +162,15 @@ function onMouseUp(_e: MouseEvent): void {
     return;
   }
 
+  // 空白处单击（未拖拽）→ 取消选中
+  if (isPanning && !panMoved) {
+    isPanning = false;
+    editorStore.deselectAll();
+    canvasManager?.refreshConveyors();
+    canvasManager?.refreshComponents();
+    return;
+  }
+
   isPanning = false;
 
   if (canvasManager) {
@@ -189,9 +205,6 @@ function onDrop(e: DragEvent): void {
   const rect = canvasHost.value.getBoundingClientRect();
   canvasStore.pushUndoSnapshot();
   const newId = handleCanvasDrop(e, rect, editorStore.viewport);
-  if (newId) {
-    canvasManager.snap.autoConnect(newId);
-  }
   canvasManager.refreshConveyors();
   canvasManager.refreshComponents();
 }
@@ -245,6 +258,24 @@ function onKeyDown(e: KeyboardEvent): void {
 
   if (editingLocked()) {
     if (e.key === 'Escape') return;
+    return;
+  }
+
+  // Ctrl+A / Cmd+A：全选（输入框中不触发）
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+      e.preventDefault();
+      const allIds = [
+        ...canvasStore.conveyorList.map(c => c.id),
+        ...canvasStore.transferList.map(t => t.id),
+        ...canvasStore.forkliftList.map(f => f.id),
+      ];
+      if (allIds.length > 0) {
+        editorStore.selectMultiple(allIds);
+        canvasManager?.selection.highlightSelected();
+      }
+    }
     return;
   }
 
@@ -341,6 +372,9 @@ function onKeyDown(e: KeyboardEvent): void {
   }
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
+    // 输入框/下拉框中正常删除文字，不删除组件
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
     canvasStore.pushUndoSnapshot();
     if (editorStore.selectedConnectionId) {
       canvasStore.removeConnection(editorStore.selectedConnectionId);

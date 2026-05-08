@@ -24,7 +24,7 @@ export class ForkliftModel {
     this.role = data.role;
     this.interval = data.interval;
     this.fluctuation = data.fluctuation ?? 0;
-    this.remainingCooldown = 0; // 立即触发首次操作
+    this.remainingCooldown = data.interval; // 首个产品也需等待冷却完毕
     this.destinationTag = data.destinationTag;
     this.palletSize = { ...data.palletSize };
   }

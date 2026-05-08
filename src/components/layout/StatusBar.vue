@@ -49,6 +49,21 @@ const compCount = computed(() => {
   return canvasStore.conveyorList.length + canvasStore.transferList.length + canvasStore.forkliftList.length;
 });
 
+const compDetail = computed(() => {
+  const chains = canvasStore.conveyorList.filter(c => c.type === 'chain').length;
+  const rollers = canvasStore.conveyorList.filter(c => c.type === 'roller').length;
+  const transfers = canvasStore.transferList.length;
+  const gens = canvasStore.forkliftList.filter(f => f.role === 'generator').length;
+  const cons = canvasStore.forkliftList.filter(f => f.role === 'consumer').length;
+  const parts: string[] = [];
+  if (chains) parts.push(`链条输送机 ×${chains}`);
+  if (rollers) parts.push(`滚筒输送机 ×${rollers}`);
+  if (transfers) parts.push(`移载机 ×${transfers}`);
+  if (gens) parts.push(`发生器 ×${gens}`);
+  if (cons) parts.push(`消费者 ×${cons}`);
+  return parts.join('\n');
+});
+
 const mousePos = computed(() => {
   const p = editorStore.mouseWorldPos;
   return `X: ${pixelsToMeters(p.x).toFixed(1)}m  Y: ${pixelsToMeters(p.y).toFixed(1)}m`;
@@ -57,7 +72,7 @@ const mousePos = computed(() => {
 
 <template>
   <footer class="status-bar" :class="statusClass" role="contentinfo" aria-label="状态栏">
-    <span class="status-text">{{ statusText }}</span>
+    <span class="status-text" :title="compDetail || ''">{{ statusText }}</span>
     <div v-if="isBatching" class="batch-bar-wrap">
       <div class="batch-bar-fill" :style="{ width: batchProgress + '%' }"></div>
     </div>

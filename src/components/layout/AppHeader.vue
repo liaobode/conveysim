@@ -46,8 +46,12 @@ function onSpeedKeydown(e: KeyboardEvent): void {
     }
   } else if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
-    speedMenuOpen.value = !speedMenuOpen.value;
-    if (speedMenuOpen.value) initHighlighted();
+    if (speedMenuOpen.value) {
+      selectSpeed(speedOptions[speedHighlighted.value]);
+    } else {
+      speedMenuOpen.value = true;
+      initHighlighted();
+    }
   } else if (e.key === 'Escape') {
     speedMenuOpen.value = false;
   }
@@ -72,9 +76,8 @@ function currentSpeedLabel(): string {
 }
 
 function onClickOutside(e: MouseEvent): void {
-  if (speedMenuOpen.value) {
-    speedMenuOpen.value = false;
-  }
+  if (speedMenuOpen.value) speedMenuOpen.value = false;
+  if (sceneMenuOpen.value) sceneMenuOpen.value = false;
 }
 
 onMounted(() => {
@@ -127,39 +130,71 @@ function onClear(): void {
   simStore.clearData();
 }
 
-function setupTestCircuit(): void {
+const sceneMenuOpen = ref(false);
+const sceneOptions = [
+  { label: '单线输送', action: 'simple' },
+  { label: '分拣回路', action: 'routing' },
+  { label: '多线并行', action: 'parallel' },
+] as const;
+
+function setupScene(type: string): void {
+  sceneMenuOpen.value = false;
   canvasStore.pushUndoSnapshot();
   canvasStore.clear();
+  simStore.clearData();
 
-  // 发生器 (100, 200)
-  const genId = canvasStore.addForklift(100, 200, 'generator');
-  canvasStore.updateForklift(genId, { interval: 1, destinationTag: 'sink-1' });
+  if (type === 'simple') {
+    // 单线输送：发生器 → 链条机 → 消费者
+    const g = canvasStore.addForklift(100, 200, 'generator');
+    canvasStore.updateForklift(g, { label: '上料口', interval: 8, destinationTag: 'sink' });           // 每 8 秒投放一托
+    const c = canvasStore.addConveyor('chain', 350, 200, 0);
+    canvasStore.updateConveyor(c, { label: '主输送线', length: 6, speed: 0.5 });                         // 0.5 m/s 典型链条机速度
+    const o = canvasStore.addForklift(650, 200, 'consumer');
+    canvasStore.updateForklift(o, { label: '下料口', interval: 6 });                                     // 每 6 秒取走一托
+    canvasStore.addConnection(g, 'output', c, 'input');
+    canvasStore.addConnection(c, 'output', o, 'input');
+  } else if (type === 'routing') {
+    // 分拣回路：发生器 → 移载机 → 两条分支 → 两个消费者
+    const g = canvasStore.addForklift(100, 200, 'generator');
+    canvasStore.updateForklift(g, { label: '上料口', interval: 10, destinationTag: 'line-b', fluctuation: 0.2 }); // 每 10s ±20% 投放
+    const c1 = canvasStore.addConveyor('chain', 300, 200, 0);
+    canvasStore.updateConveyor(c1, { label: '入口线', length: 5, speed: 0.5 });                                   // 0.5 m/s
+    const t = canvasStore.addTransferMachine(550, 200);
+    canvasStore.updateTransfer(t, { label: '分拣台', actionTime: 3, routingTable: { 'line-a': 'north', 'line-b': 'south' }, defaultRoute: 'south' }); // 3 秒完成分拣
+    const c2a = canvasStore.addConveyor('chain', 550, 50, -Math.PI / 2);
+    canvasStore.updateConveyor(c2a, { label: 'A线', length: 5, speed: 0.5 });
+    const oa = canvasStore.addForklift(550, -100, 'consumer');
+    canvasStore.updateForklift(oa, { label: 'A出口', interval: 8 });
+    const c2b = canvasStore.addConveyor('chain', 550, 400, Math.PI / 2);
+    canvasStore.updateConveyor(c2b, { label: 'B线', length: 5, speed: 0.5 });
+    const ob = canvasStore.addForklift(550, 650, 'consumer');
+    canvasStore.updateForklift(ob, { label: 'B出口', interval: 8 });
+    canvasStore.addConnection(g, 'output', c1, 'input');
+    canvasStore.addConnection(c1, 'output', t, 'west');
+    canvasStore.addConnection(t, 'north', c2a, 'input');
+    canvasStore.addConnection(t, 'south', c2b, 'input');
+    canvasStore.addConnection(c2a, 'output', oa, 'input');
+    canvasStore.addConnection(c2b, 'output', ob, 'input');
+  } else if (type === 'parallel') {
+    // 多线并行：两条独立输送线并排运行
+    const g1 = canvasStore.addForklift(100, 140, 'generator');
+    canvasStore.updateForklift(g1, { label: '上料口1', interval: 10, destinationTag: 'sink' });          // 每 10 秒投放
+    const c1 = canvasStore.addConveyor('chain', 350, 140, 0);
+    canvasStore.updateConveyor(c1, { label: '1号线(链条)', length: 8, speed: 0.5 });                      // 链条机 0.5 m/s
+    const o1 = canvasStore.addForklift(700, 140, 'consumer');
+    canvasStore.updateForklift(o1, { label: '出口1', interval: 8 });
+    canvasStore.addConnection(g1, 'output', c1, 'input');
+    canvasStore.addConnection(c1, 'output', o1, 'input');
 
-  // 链条输送机1：水平，长度 3m = 150px，中心 (300, 200)
-  const conv1Id = canvasStore.addConveyor('chain', 300, 200, 0);
-  canvasStore.updateConveyor(conv1Id, { length: 3, speed: 1.5 });
-
-  // 移载机 (500, 200)
-  const transId = canvasStore.addTransferMachine(500, 200);
-  canvasStore.updateTransfer(transId, {
-    actionTime: 1,
-    routingTable: { 'sink-1': 'south' },
-    defaultRoute: 'south',
-  });
-
-  // 链条输送机2：垂直向下，旋转 PI/2，中心 (500, 350)
-  const conv2Id = canvasStore.addConveyor('chain', 500, 350, Math.PI / 2);
-  canvasStore.updateConveyor(conv2Id, { length: 3, speed: 1.5 });
-
-  // 消费者 (500, 500)
-  const consId = canvasStore.addForklift(500, 500, 'consumer');
-  canvasStore.updateForklift(consId, { interval: 5 });
-
-  // 手动创建连接
-  canvasStore.addConnection(genId, 'output', conv1Id, 'input');
-  canvasStore.addConnection(conv1Id, 'output', transId, 'west');
-  canvasStore.addConnection(transId, 'south', conv2Id, 'input');
-  canvasStore.addConnection(conv2Id, 'output', consId, 'input');
+    const g2 = canvasStore.addForklift(100, 260, 'generator');
+    canvasStore.updateForklift(g2, { label: '上料口2', interval: 10, destinationTag: 'sink', fluctuation: 0.15 }); // 10s ±15%
+    const c2 = canvasStore.addConveyor('roller', 350, 260, 0);
+    canvasStore.updateConveyor(c2, { label: '2号线(滚筒)', length: 8, speed: 0.8 });                      // 滚筒机 0.8 m/s（更快）
+    const o2 = canvasStore.addForklift(700, 260, 'consumer');
+    canvasStore.updateForklift(o2, { label: '出口2', interval: 8 });
+    canvasStore.addConnection(g2, 'output', c2, 'input');
+    canvasStore.addConnection(c2, 'output', o2, 'input');
+  }
 
   useEditorStore().requestFitView();
 }
@@ -169,7 +204,17 @@ function setupTestCircuit(): void {
   <header class="app-header" role="banner" aria-label="主工具栏">
     <span class="logo">ConveySim</span>
     <div class="controls">
-      <button class="btn" title="搭建测试回路" @click="setupTestCircuit"><FlaskConical :size="14" /> 测试</button>
+      <div class="speed-wrap" @click.stop>
+        <button class="btn" title="示例场景" @click="sceneMenuOpen = !sceneMenuOpen"><FlaskConical :size="14" /> 示例</button>
+        <div v-if="sceneMenuOpen" class="speed-dropdown">
+          <div
+            v-for="opt in sceneOptions"
+            :key="opt.action"
+            class="speed-option"
+            @click="setupScene(opt.action)"
+          >{{ opt.label }}</div>
+        </div>
+      </div>
       <button class="btn" title="导入场景" @click="uiStore.openLoadDialog()"><FolderOpen :size="14" /> 导入</button>
       <button class="btn" title="保存场景" @click="uiStore.openSaveDialog()"><Save :size="14" /> 保存</button>
       <button
@@ -298,6 +343,10 @@ function setupTestCircuit(): void {
   color: var(--color-warning);
   min-width: 36px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .speed-btn:hover {

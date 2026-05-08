@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 const props = defineProps<{
   routingTable: Record<string, string>;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +44,7 @@ function removeRule(dest: string): void {
       <span class="dest">{{ dest }}</span>
       <span class="arrow">&rarr;</span>
       <span class="action">{{ action === 'straight' ? '直行' : '转向' }}</span>
-      <button class="btn-remove" @click="removeRule(dest)">x</button>
+      <button :disabled="props.disabled" class="btn-remove" @click="removeRule(dest)">x</button>
     </div>
 
     <div class="add-rule">
@@ -54,11 +55,11 @@ function removeRule(dest: string): void {
         class="dest-input"
         @keyup.enter="addRule"
       />
-      <select v-model="newAction" class="action-select">
+      <select :disabled="props.disabled" v-model="newAction" class="action-select">
         <option value="straight">直行</option>
         <option value="turn">转向</option>
       </select>
-      <button class="btn-add" @click="addRule">+</button>
+      <button :disabled="props.disabled" class="btn-add" @click="addRule">+</button>
     </div>
   </div>
 </template>

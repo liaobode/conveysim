@@ -71,7 +71,11 @@ export class ForkliftGraphic extends PIXI.Container {
 
   updateCooldown(cooldown: number, interval: number): void {
     this.cooldownBar.clear();
-    if (interval <= 0) return;
+    // cooldown < 0 表示消费者空闲无等待托盘，隐藏进度条和脉冲
+    if (cooldown < 0 || interval <= 0) {
+      this.body.alpha = 1;
+      return;
+    }
 
     const w = 40;
     const progress = 1 - cooldown / interval;

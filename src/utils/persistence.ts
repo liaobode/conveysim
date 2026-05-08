@@ -36,6 +36,16 @@ export function clearDraft(): void {
   localStorage.removeItem(DRAFT_KEY);
 }
 
+export function downloadCSV(csv: string, filename: string): void {
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function downloadJSON(scene: SceneJSON, filename = 'conveysim-scene.json'): void {
   const json = exportToJSON(scene);
   const blob = new Blob([json], { type: 'application/json' });

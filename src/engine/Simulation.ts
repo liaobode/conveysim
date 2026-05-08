@@ -136,6 +136,24 @@ export class Simulation {
     return { kind: 'none' };
   }
 
+  /** 查找消费者上游输送机末端等待的托盘 */
+  private findWaitingPallet(consumerId: string): PalletModel | null {
+    // 遍历所有连接，找到连接到该消费者 input 端口的输送机
+    for (const [key, toId] of this.downstreamMap) {
+      if (toId !== consumerId) continue;
+      const [compId, port] = key.split(':');
+      if (!port || port !== 'output') continue;
+      const conv = this.conveyors.get(compId);
+      if (!conv) continue;
+      const exitZone = conv.zones[conv.getExitZoneIndex()];
+      if (exitZone.occupied && exitZone.occupiedByPalletId) {
+        const pallet = this.pallets.get(exitZone.occupiedByPalletId);
+        if (pallet) return pallet;
+      }
+    }
+    return null;
+  }
+
   start(): void {
     if (this.running) return;
     this.running = true;
@@ -206,24 +224,38 @@ export class Simulation {
     try {
     const dt = this.tickDurationSec;
 
-    // === 阶段 1：叉车发生器 ===
+    // === 阶段 1：叉车 ===
     for (const [, forklift] of this.forklifts) {
-      if (forklift.role !== 'generator') continue;
-      const action = forklift.tick(dt);
-      if (action === 'generate') {
-        const downstream = this.getDownstream(forklift.id, 'output');
-        if (downstream.kind === 'conveyor' && downstream.model.canAcceptPallet()) {
-          const pallet = new PalletModel(
-            generateId('pal'),
-            forklift.destinationTag,
-            forklift.palletSize,
-          );
-          this.pallets.set(pallet.id, pallet);
-          downstream.model.acceptPallet(pallet, 'input', this.simTime);
-          pallet.worldRotation = downstream.model.rotation;
-          this.emitEvent('PALLET_GENERATED', forklift.id, pallet.id);
-        } else {
-          this.emitEvent('CAPACITY_REJECTED', forklift.id, undefined, '下游输送机入口已满');
+      if (forklift.role === 'generator') {
+        const action = forklift.tick(dt);
+        if (action === 'generate') {
+          const downstream = this.getDownstream(forklift.id, 'output');
+          if (downstream.kind === 'conveyor' && downstream.model.canAcceptPallet()) {
+            const pallet = new PalletModel(
+              generateId('pal'),
+              forklift.destinationTag,
+              forklift.palletSize,
+            );
+            this.pallets.set(pallet.id, pallet);
+            downstream.model.acceptPallet(pallet, 'input', this.simTime);
+            pallet.worldRotation = downstream.model.rotation;
+            this.emitEvent('PALLET_GENERATED', forklift.id, pallet.id);
+          } else {
+            this.emitEvent('CAPACITY_REJECTED', forklift.id, undefined, '下游输送机入口已满');
+          }
+        }
+      } else {
+        // 消费者：仅在有托盘等待时才倒计时
+        const waiting = this.findWaitingPallet(forklift.id);
+        if (waiting) {
+          const action = forklift.tick(dt);
+          if (action === 'consume') {
+            const conv = this.conveyors.get(waiting.currentComponentId);
+            if (conv) conv.removePallet(waiting);
+            this.totalConsumed++;
+            this.emitEvent('PALLET_CONSUMED', forklift.id, waiting.id);
+            this.pallets.delete(waiting.id);
+          }
         }
       }
     }
@@ -287,20 +319,13 @@ export class Simulation {
             break;
           case 'forklift':
             if (downstream.model.role === 'consumer') {
-              const action = downstream.model.tick(dt);
-              if (action === 'consume') {
-                this.totalConsumed++;
-                this.emitEvent('PALLET_CONSUMED', downstream.model.id, pallet.id);
-                this.pallets.delete(pallet.id);
-              } else {
-                // 消费者冷却中 → 托盘阻塞在输送机末端等待
-                pallet.isBlocked = true;
-                pallet.currentZoneIndex = conveyor.getExitZoneIndex();
-                pallet.progressInZone = 0.99;
-                conveyor.zones[pallet.currentZoneIndex].occupied = true;
-                conveyor.zones[pallet.currentZoneIndex].occupiedByPalletId = pallet.id;
-                conveyor.pallets.push(pallet);
-              }
+              // 托盘到达下料口 → 留在输送机末端等待，由阶段1的tick驱动冷却
+              pallet.isBlocked = true;
+              pallet.currentZoneIndex = conveyor.getExitZoneIndex();
+              pallet.progressInZone = 0.99;
+              conveyor.zones[pallet.currentZoneIndex].occupied = true;
+              conveyor.zones[pallet.currentZoneIndex].occupiedByPalletId = pallet.id;
+              conveyor.pallets.push(pallet);
             }
             break;
           case 'none':
@@ -368,7 +393,11 @@ export class Simulation {
 
     const forkliftCooldowns: Record<string, number> = {};
     for (const [, f] of this.forklifts) {
-      forkliftCooldowns[f.id] = f.remainingCooldown;
+      if (f.role === 'consumer' && !this.findWaitingPallet(f.id)) {
+        forkliftCooldowns[f.id] = -1; // 空闲隐藏进度条
+      } else {
+        forkliftCooldowns[f.id] = f.remainingCooldown;
+      }
     }
 
     this.onFrameUpdate({

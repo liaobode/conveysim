@@ -12,6 +12,7 @@ onMounted(() => {
 
 const shortcuts = [
   { key: 'Delete / Backspace', desc: '删除选中组件' },
+  { key: 'Ctrl + A', desc: '全选所有组件' },
   { key: 'Ctrl + C', desc: '复制选中组件' },
   { key: 'Ctrl + V', desc: '粘贴组件' },
   { key: 'Ctrl + Z', desc: '撤销' },

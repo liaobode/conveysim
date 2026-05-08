@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import HeatmapLegend from './HeatmapLegend.vue';
-import { downloadJSON } from '../../utils/persistence';
+import { downloadJSON, downloadCSV } from '../../utils/persistence';
 
 const simStore = useSimulationStore();
 const canvasStore = useCanvasStore();
@@ -73,7 +73,7 @@ const multiRunSummary = computed(() => {
   return { avg, min, max };
 });
 
-function exportReport(): void {
+function exportJSON(): void {
   const report = {
     simTime: simStore.elapsedSimTime,
     throughput: simStore.throughput,
@@ -83,6 +83,33 @@ function exportReport(): void {
     bottleneckId: simStore.bottleneckId,
   };
   downloadJSON(report as any, `conveysim-report-${Date.now()}.json`);
+}
+
+function exportCSV(): void {
+  const lines: string[] = [];
+  lines.push('类型,名称,数值');
+
+  // 概览
+  lines.push(`概览,仿真时间,${simStore.elapsedSimTime.toFixed(1)}s`);
+  lines.push(`概览,吞吐量,${simStore.throughput.toFixed(1)} 托/时`);
+
+  // 利用率
+  for (const [id, util] of Object.entries(simStore.conveyorUtilization)) {
+    lines.push(`利用率,${convLabel(id)},${(util * 100).toFixed(0)}%`);
+  }
+
+  // 停留时间
+  for (const [id, stats] of Object.entries(simStore.dwellStats)) {
+    lines.push(`平均停留,${convLabel(id)},${(stats.totalSec / stats.count).toFixed(1)}s`);
+    lines.push(`最长停留,${convLabel(id)},${stats.maxSec.toFixed(1)}s`);
+  }
+
+  // 拥堵事件
+  for (const evt of simStore.congestionEvents) {
+    lines.push(`拥堵事件,${convLabel(evt.conveyorId)},${evt.startSec.toFixed(0)}s~${evt.endSec.toFixed(0)}s`);
+  }
+
+  downloadCSV(lines.join('\n'), `conveysim-report-${Date.now()}.csv`);
 }
 </script>
 
@@ -177,7 +204,10 @@ function exportReport(): void {
       </div>
 
       <!-- 导出 -->
-      <button class="btn-export" @click="exportReport">导出报告</button>
+      <div class="export-btns">
+        <button class="btn-export" @click="exportJSON">导出 JSON</button>
+        <button class="btn-export" @click="exportCSV">导出 CSV</button>
+      </div>
     </div>
     </div>
   </div>
@@ -264,9 +294,14 @@ function exportReport(): void {
 .util-bar-fill.red { background: var(--color-primary); }
 .util-pct { color: var(--color-fg-muted); min-width: 30px; text-align: right; }
 
-.btn-export {
+.export-btns {
+  display: flex;
+  gap: 6px;
   margin-top: 12px;
-  width: 100%;
+}
+
+.btn-export {
+  flex: 1;
   padding: 6px;
   background: var(--color-btn-confirm-bg);
   border: 1px solid var(--color-border);

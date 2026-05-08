@@ -26,6 +26,7 @@ function clampWithFlash(field: string, v: number, min: number, max: number): num
 const editorStore = useEditorStore();
 const canvasStore = useCanvasStore();
 const simStore = useSimulationStore();
+const isLocked = computed(() => simStore.status !== 'idle' || simStore.multiRunTotal > 0);
 
 type ComponentKind = 'conveyor' | 'transfer' | 'forklift' | null;
 
@@ -56,33 +57,29 @@ const forkliftData = computed<ForkliftData | null>(() =>
 );
 
 function updateConveyor(patch: Partial<ConveyorData>): void {
-  if (selection.value.kind === 'conveyor') {
-    canvasStore.updateConveyor(selection.value.id, patch);
-  }
+  if (isLocked.value || selection.value.kind !== 'conveyor') return;
+  canvasStore.updateConveyor(selection.value.id, patch);
 }
 
 function updateTransfer(patch: Partial<TransferMachineData>): void {
-  if (selection.value.kind === 'transfer') {
-    canvasStore.updateTransfer(selection.value.id, patch);
-  }
+  if (isLocked.value || selection.value.kind !== 'transfer') return;
+  canvasStore.updateTransfer(selection.value.id, patch);
 }
 
 function updateForklift(patch: Partial<ForkliftData>): void {
-  if (selection.value.kind === 'forklift') {
-    canvasStore.updateForklift(selection.value.id, patch);
-  }
+  if (isLocked.value || selection.value.kind !== 'forklift') return;
+  canvasStore.updateForklift(selection.value.id, patch);
 }
 
 function deleteComponent(): void {
-  if (selection.value.id) {
-    canvasStore.removeComponent(selection.value.id);
-    editorStore.selectComponent(null);
-  }
+  if (isLocked.value || !selection.value.id) return;
+  canvasStore.removeComponent(selection.value.id);
+  editorStore.selectComponent(null);
 }
 </script>
 
 <template>
-  <aside class="property-panel">
+  <aside class="property-panel" @keydown.enter="($event.target as HTMLElement)?.blur()">
     <div class="panel-title" @click="panelCollapsed = !panelCollapsed">
       属性
       <ChevronUp v-if="!panelCollapsed" :size="14" />
@@ -91,7 +88,7 @@ function deleteComponent(): void {
 
     <div v-show="!panelCollapsed">
     <!-- 锁定 -->
-    <p v-if="simStore.status !== 'idle' || simStore.multiRunTotal > 0" class="locked">仿真运行中，编辑已锁定</p>
+    <p v-if="isLocked" class="locked">仿真运行中 — 只读模式</p>
 
     <!-- 未选中 -->
     <p v-else-if="selection.kind === null" class="placeholder">
@@ -104,6 +101,7 @@ function deleteComponent(): void {
     <div v-if="selection.kind === 'conveyor' && conveyorData" class="form">
       <label>标签</label>
       <input
+          :disabled="isLocked"
         type="text"
         :value="conveyorData.label"
         placeholder="输入标签名称"
@@ -115,6 +113,7 @@ function deleteComponent(): void {
 
       <label>长度 (米)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="conveyorData.length"
         :class="{ 'input-flash': flashFields['conv-length'] }"
@@ -124,6 +123,7 @@ function deleteComponent(): void {
 
       <label>宽度 (米)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="conveyorData.width"
         :class="{ 'input-flash': flashFields['conv-width'] }"
@@ -133,6 +133,7 @@ function deleteComponent(): void {
 
       <label>速度 (米/秒)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="conveyorData.speed"
         :class="{ 'input-flash': flashFields['conv-speed'] }"
@@ -142,6 +143,7 @@ function deleteComponent(): void {
 
       <label>方向</label>
       <select
+          :disabled="isLocked"
         :value="conveyorData.direction"
         @change="updateConveyor({ direction: ($event.target as HTMLSelectElement).value as ConveyorData['direction'] })"
       >
@@ -151,6 +153,7 @@ function deleteComponent(): void {
 
       <label>ZPA 间距 (米)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="conveyorData.zoneSpacing"
         :class="{ 'input-flash': flashFields['conv-zonespace'] }"
@@ -163,6 +166,7 @@ function deleteComponent(): void {
     <div v-if="selection.kind === 'transfer' && transferData" class="form">
       <label>标签</label>
       <input
+          :disabled="isLocked"
         type="text"
         :value="transferData.label"
         placeholder="输入标签名称"
@@ -171,6 +175,7 @@ function deleteComponent(): void {
 
       <label>动作时间 (秒)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="transferData.actionTime"
         :class="{ 'input-flash': flashFields['trans-time'] }"
@@ -180,6 +185,7 @@ function deleteComponent(): void {
 
       <label>默认路由</label>
       <select
+          :disabled="isLocked"
         :value="transferData.defaultRoute"
         @change="updateTransfer({ defaultRoute: ($event.target as HTMLSelectElement).value })"
       >
@@ -189,6 +195,7 @@ function deleteComponent(): void {
 
       <label>旋转货物方向</label>
       <select
+          :disabled="isLocked"
         :value="transferData.rotatePallet ? 'yes' : 'no'"
         @change="updateTransfer({ rotatePallet: ($event.target as HTMLSelectElement).value === 'yes' })"
       >
@@ -198,6 +205,7 @@ function deleteComponent(): void {
 
       <RoutingTable
         :routing-table="transferData.routingTable"
+        :disabled="isLocked"
         @update="updateTransfer({ routingTable: $event })"
       />
     </div>
@@ -206,6 +214,7 @@ function deleteComponent(): void {
     <div v-if="selection.kind === 'forklift' && forkliftData" class="form">
       <label>标签</label>
       <input
+          :disabled="isLocked"
         type="text"
         :value="forkliftData.label"
         placeholder="输入标签名称"
@@ -217,6 +226,7 @@ function deleteComponent(): void {
 
       <label>操作间隔 (秒)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="forkliftData.interval"
         :class="{ 'input-flash': flashFields['fork-interval'] }"
@@ -226,6 +236,7 @@ function deleteComponent(): void {
 
       <label>波动范围</label>
       <select
+          :disabled="isLocked"
         :value="forkliftData.fluctuation"
         @change="updateForklift({ fluctuation: +($event.target as HTMLSelectElement).value })"
       >
@@ -238,6 +249,7 @@ function deleteComponent(): void {
 
       <label v-if="forkliftData.role === 'generator'">托盘目的地标签</label>
       <input
+          :disabled="isLocked"
         v-if="forkliftData.role === 'generator'"
         type="text"
         :value="forkliftData.destinationTag"
@@ -246,6 +258,7 @@ function deleteComponent(): void {
 
       <label>托盘长 (米)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="forkliftData.palletSize.width"
         min="0.4" max="5" step="0.1"
@@ -254,6 +267,7 @@ function deleteComponent(): void {
 
       <label>托盘宽 (米)</label>
       <input
+          :disabled="isLocked"
         type="number"
         :value="forkliftData.palletSize.height"
         min="0.4" max="5" step="0.1"
@@ -263,6 +277,7 @@ function deleteComponent(): void {
 
     <!-- 删除按钮 -->
     <button
+          :disabled="isLocked"
       v-if="selection.kind !== null"
       class="btn-delete"
       @click="deleteComponent"
