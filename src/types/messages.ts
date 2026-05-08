@@ -44,6 +44,13 @@ export interface CongestionEvent {
   endSec: number;
 }
 
+export interface TimeSegmentData {
+  startSec: number;
+  endSec: number;
+  consumedCount: number;
+  avgUtilization: number;
+}
+
 export interface StatisticsPayload {
   conveyorUtilization: Record<string, number>;
   overallThroughput: number;
@@ -51,6 +58,7 @@ export interface StatisticsPayload {
   dwellStats: Record<string, DwellStats>;
   congestionEvents: CongestionEvent[];
   bottleneckId: string | null;
+  totalConsumed: number;
 }
 
 export type SimulationEventType =

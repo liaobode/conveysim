@@ -6,6 +6,7 @@ import Toolbar from './components/layout/Toolbar.vue';
 import CanvasContainer from './components/canvas/CanvasContainer.vue';
 import PropertyPanel from './components/panels/PropertyPanel.vue';
 import DataPanel from './components/panels/DataPanel.vue';
+import EventLogPanel from './components/panels/EventLogPanel.vue';
 import SaveDialog from './components/dialogs/SaveDialog.vue';
 import LoadDialog from './components/dialogs/LoadDialog.vue';
 import BatchDialog from './components/dialogs/BatchDialog.vue';
@@ -97,6 +98,7 @@ onUnmounted(() => {
       <aside class="right-panel" role="complementary" aria-label="属性和数据面板" :style="{ width: rightPanelWidth + 'px' }">
         <PropertyPanel />
         <DataPanel />
+        <EventLogPanel />
       </aside>
     </div>
     <StatusBar />

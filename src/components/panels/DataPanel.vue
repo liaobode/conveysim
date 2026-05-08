@@ -5,19 +5,13 @@ import { useSimulationStore } from '../../stores/simulationStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import HeatmapLegend from './HeatmapLegend.vue';
 import { downloadJSON, downloadCSV } from '../../utils/persistence';
+import { convLabel as getLabel } from '../../utils/labels';
 
 const simStore = useSimulationStore();
 const canvasStore = useCanvasStore();
 
-const convLabel = (id: string): string => {
-  const c = canvasStore.conveyors[id];
-  if (c) return c.label || `${c.type === 'chain' ? '链条' : '滚筒'} ${id.slice(-4)}`;
-  const t = canvasStore.transferMachines[id];
-  if (t) return t.label || `移载机 ${id.slice(-4)}`;
-  const f = canvasStore.forklifts[id];
-  if (f) return f.label || `${f.role === 'generator' ? '发生器' : '消费者'} ${id.slice(-4)}`;
-  return id;
-};
+const convLabel = (id: string): string =>
+  getLabel(id, canvasStore.conveyors, canvasStore.transferMachines, canvasStore.forklifts);
 
 const simTimeFormatted = computed(() => {
   const t = simStore.elapsedSimTime;
@@ -55,6 +49,20 @@ const bottleneckLabel = computed(() => {
 });
 
 const panelCollapsed = ref(false);
+
+// 分时段统计
+const segmentChart = computed(() => {
+  const segs = simStore.timeSegments;
+  if (segs.length < 2) return null;
+  const maxConsumed = Math.max(...segs.map((s) => s.consumedCount), 1);
+  return segs.map((s) => ({
+    label: `${Math.floor(s.startSec / 60)}:${String(s.startSec % 60).padStart(2, '0')}`,
+    consumed: s.consumedCount,
+    utilPct: Math.round(s.avgUtilization * 100),
+    consumedH: Math.round((s.consumedCount / maxConsumed) * 100),
+    utilH: Math.round(s.avgUtilization * 100),
+  }));
+});
 
 const hasData = computed(() =>
   simStore.status === 'running' ||
@@ -203,6 +211,43 @@ function exportCSV(): void {
         </div>
       </div>
 
+      <!-- 分时段统计 -->
+      <div v-if="segmentChart && segmentChart.length >= 2" class="section">
+        <div class="section-title">分时段统计</div>
+        <!-- 吞吐量柱状图 -->
+        <div class="seg-subtitle">吞吐量 (托/分钟)</div>
+        <div class="seg-chart">
+          <div v-for="(seg, i) in segmentChart" :key="'t'+i" class="seg-bar-wrap">
+            <div class="seg-bar-label">{{ seg.consumed }}</div>
+            <div
+              class="seg-bar seg-bar-throughput"
+              :style="{ height: seg.consumedH + '%' }"
+            ></div>
+            <div class="seg-time-label">{{ seg.label }}</div>
+          </div>
+        </div>
+        <!-- 利用率柱状图 -->
+        <div class="seg-subtitle">平均利用率 (%)</div>
+        <div class="seg-chart">
+          <div v-for="(seg, i) in segmentChart" :key="'u'+i" class="seg-bar-wrap">
+            <div class="seg-bar-label">{{ seg.utilPct }}%</div>
+            <div
+              class="seg-bar seg-bar-util"
+              :style="{ height: seg.utilH + '%' }"
+              :class="{
+                green: seg.utilPct < 50,
+                yellow: seg.utilPct >= 50 && seg.utilPct < 85,
+                red: seg.utilPct >= 85,
+              }"
+            ></div>
+            <div class="seg-time-label">{{ seg.label }}</div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="simStore.elapsedSimTime >= 60 && simStore.timeSegments.length < 2" class="seg-waiting">
+        仿真运行不足 2 分钟，待数据积累后显示趋势
+      </div>
+
       <!-- 导出 -->
       <div class="export-btns">
         <button class="btn-export" @click="exportJSON">导出 JSON</button>
@@ -313,4 +358,72 @@ function exportCSV(): void {
 .stat-value.green { color: var(--color-green); }
 .stat-value.red { color: var(--color-primary); }
 .btn-export:hover { background: var(--color-btn-confirm-hover); }
+
+/* 分时段统计柱状图 */
+.seg-subtitle {
+  font-size: 10px;
+  color: var(--color-fg-muted);
+  margin: 8px 0 4px;
+}
+
+.seg-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 80px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.seg-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.seg-bar-label {
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  font-family: var(--font-mono);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.seg-bar {
+  width: 100%;
+  max-width: 24px;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+}
+
+.seg-bar-throughput {
+  background: var(--color-success);
+}
+
+.seg-bar-util {
+  background: var(--color-warning);
+}
+
+.seg-bar-util.green { background: var(--color-success); }
+.seg-bar-util.yellow { background: var(--color-warning); }
+.seg-bar-util.red { background: var(--color-primary); }
+
+.seg-time-label {
+  font-size: 8px;
+  color: var(--color-fg-dim);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+.seg-waiting {
+  font-size: 12px;
+  color: var(--color-fg-dim);
+  padding: 12px 0;
+}
 </style>

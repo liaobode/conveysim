@@ -339,7 +339,6 @@ export class SnapManager {
       this.canvasStore.forklifts,
     );
   }
-  }
 
   private pointToSegmentDist(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
     const dx = x2 - x1;

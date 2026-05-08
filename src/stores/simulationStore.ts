@@ -5,6 +5,9 @@ import type {
   DwellStats,
   CongestionEvent,
   SceneJSON,
+  SimulationEvent,
+  TimeSegmentData,
+  MainToWorkerMessage,
 } from '../types';
 import { Simulation } from '../engine/Simulation';
 import { useUIStore } from './uiStore';
@@ -25,6 +28,8 @@ interface SimulationState {
   dwellStats: Record<string, DwellStats>;
   congestionEvents: CongestionEvent[];
   bottleneckId: string | null;
+  eventLog: SimulationEvent[];
+  timeSegments: TimeSegmentData[];
   worker: Worker | null;
   directSim: Simulation | null;
   /** 仿真时长限制（秒），0 = 无限制 */
@@ -37,6 +42,63 @@ interface SimulationState {
   _batchSim: Simulation | null;
   /** 批量运行取消标志，避免 status/multiRunTotal 复合判断的竞态 */
   _batchCancelled: boolean;
+}
+
+// 分时段统计累加器（无需响应式）
+const SEGMENT_DURATION_SEC = 60;
+const MAX_SEGMENTS = 120;
+let _segStartTime = 0;
+let _segConsumedStart = 0;
+let _segUtilSamples: number[] = [];
+let _segConsumedCount = 0;
+
+function accumulateSegment(
+  simTime: number,
+  totalConsumed: number,
+  conveyorUtilization: Record<string, number>,
+): TimeSegmentData | null {
+  if (_segStartTime === 0) {
+    _segStartTime = simTime;
+    _segConsumedStart = totalConsumed;
+  }
+
+  // 累加当前时段的采样
+  _segConsumedCount = totalConsumed - _segConsumedStart;
+  const utils = Object.values(conveyorUtilization);
+  if (utils.length > 0) {
+    _segUtilSamples.push(utils.reduce((a, b) => a + b, 0) / utils.length);
+  }
+
+  // 跨越时段边界时生成快照
+  const segEnd = _segStartTime + SEGMENT_DURATION_SEC;
+  if (simTime >= segEnd) {
+    const avgUtil = _segUtilSamples.length > 0
+      ? _segUtilSamples.reduce((a, b) => a + b, 0) / _segUtilSamples.length
+      : 0;
+    const segment: TimeSegmentData = {
+      startSec: Math.round(_segStartTime),
+      endSec: Math.round(segEnd),
+      consumedCount: _segConsumedCount,
+      avgUtilization: Math.round(avgUtil * 1000) / 1000,
+    };
+
+    // 推进到下一个时段
+    _segStartTime = segEnd;
+    _segConsumedStart = totalConsumed;
+    _segUtilSamples = [];
+    _segConsumedCount = 0;
+
+    return segment;
+  }
+
+  return null;
+}
+
+function resetSegmentAccumulator(): void {
+  _segStartTime = 0;
+  _segConsumedStart = 0;
+  _segUtilSamples = [];
+  _segConsumedCount = 0;
 }
 
 export const useSimulationStore = defineStore('simulation', {
@@ -54,6 +116,8 @@ export const useSimulationStore = defineStore('simulation', {
     dwellStats: {},
     congestionEvents: [],
     bottleneckId: null,
+    eventLog: [],
+    timeSegments: [],
     worker: null,
     directSim: null,
     timeLimitSec: 0,
@@ -86,6 +150,9 @@ export const useSimulationStore = defineStore('simulation', {
       this.dwellStats = {};
       this.congestionEvents = [];
       this.bottleneckId = null;
+      this.eventLog = [];
+      this.timeSegments = [];
+      resetSegmentAccumulator();
 
       let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -139,8 +206,10 @@ export const useSimulationStore = defineStore('simulation', {
               this.dwellStats = msg.payload.dwellStats || {};
               this.congestionEvents = msg.payload.congestionEvents || [];
               this.bottleneckId = msg.payload.bottleneckId || null;
+              this._pushSegment(this.elapsedSimTime, msg.payload.totalConsumed, msg.payload.conveyorUtilization);
               break;
             case 'SIMULATION_EVENT':
+              this.addEvent(msg.payload);
               if (msg.payload.eventType === 'ERROR') {
                 useUIStore().addToast('仿真异常: ' + (msg.payload.detail || '未知错误'), 'error');
               }
@@ -165,8 +234,9 @@ export const useSimulationStore = defineStore('simulation', {
           this.fallbackToDirect(scene, tickIntervalMs);
         }, 1000);
 
-      } catch (err: any) {
-        useUIStore().addToast('Worker 创建失败: ' + err.message + '，使用主线程模式', 'warn');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useUIStore().addToast('Worker 创建失败: ' + msg + '，使用主线程模式', 'warn');
         this.fallbackToDirect(scene, tickIntervalMs);
       }
 
@@ -198,46 +268,41 @@ export const useSimulationStore = defineStore('simulation', {
           this.dwellStats = payload.dwellStats || {};
           this.congestionEvents = payload.congestionEvents || [];
           this.bottleneckId = payload.bottleneckId || null;
+          this._pushSegment(this.elapsedSimTime, payload.totalConsumed, payload.conveyorUtilization);
         },
-        onEvent: (_payload) => {},
+        onEvent: (payload) => {
+          this.addEvent(payload);
+        },
       });
       this.directSim.init(scene, tickIntervalMs);
     },
 
-    sendCommand(msg: any): void {
-      if (this.worker) {
-        this.worker.postMessage(msg);
-      }
+    /** 向 Worker 发送命令，同时执行 direct 模式下的对应操作 */
+    _dispatch(msg: MainToWorkerMessage, directFn?: () => void): void {
+      if (this.worker) this.worker.postMessage(msg);
+      directFn?.();
     },
 
     start(): void {
-      if (this.directSim) {
-        this.directSim.start();
-        this.status = 'running';
-        return;
-      }
-      this.sendCommand({ type: 'START' });
+      this._dispatch({ type: 'START' }, () => this.directSim?.start());
       this.status = 'running';
     },
 
     pause(): void {
-      this.sendCommand({ type: 'PAUSE' });
-      if (this.directSim) this.directSim.pause();
+      this._dispatch({ type: 'PAUSE' }, () => this.directSim?.pause());
       this.status = 'paused';
     },
 
     resume(): void {
-      this.sendCommand({ type: 'RESUME' });
-      if (this.directSim) this.directSim.resume();
+      this._dispatch({ type: 'RESUME' }, () => this.directSim?.resume());
       this.status = 'running';
     },
 
     stop(): void {
-      this.sendCommand({ type: 'STOP' });
-      if (this.directSim) {
-        this.directSim.stop();
+      this._dispatch({ type: 'STOP' }, () => {
+        this.directSim?.stop();
         this.directSim = null;
-      }
+      });
       if (this.worker) {
         this.worker.terminate();
         this.worker = null;
@@ -253,11 +318,8 @@ export const useSimulationStore = defineStore('simulation', {
     },
 
     step(): void {
-      if (this.status === 'idle') {
-        // 需要先 init
-      }
-      this.sendCommand({ type: 'STEP' });
-      if (this.directSim) this.directSim.step();
+      if (this.status === 'idle') return;
+      this._dispatch({ type: 'STEP' }, () => this.directSim?.step());
       this.status = 'paused';
     },
 
@@ -273,29 +335,47 @@ export const useSimulationStore = defineStore('simulation', {
       this.congestionEvents = [];
       this.bottleneckId = null;
       this.multiRunResults = [];
+      this.eventLog = [];
+      this.timeSegments = [];
+      resetSegmentAccumulator();
+    },
+
+    addEvent(event: SimulationEvent): void {
+      this.eventLog.push(event);
+      if (this.eventLog.length > 500) {
+        this.eventLog.shift();
+      }
+    },
+
+    clearEventLog(): void {
+      this.eventLog = [];
+    },
+
+    _pushSegment(simTime: number, totalConsumed: number, conveyorUtilization: Record<string, number>): void {
+      const seg = accumulateSegment(simTime, totalConsumed, conveyorUtilization);
+      if (seg) {
+        this.timeSegments.push(seg);
+        if (this.timeSegments.length > MAX_SEGMENTS) {
+          this.timeSegments.shift();
+        }
+      }
     },
 
     setSpeed(multiplier: number): void {
       this.speedMultiplier = multiplier;
       this.maxMode = false;
-      this.sendCommand({ type: 'SET_SPEED', multiplier });
-      this.sendCommand({ type: 'SET_MAX_MODE', enabled: false });
-      if (this.directSim) {
-        this.directSim.setSpeed(multiplier);
-        this.directSim.setMaxMode(false);
-      }
+      this._dispatch({ type: 'SET_SPEED', multiplier }, () => this.directSim?.setSpeed(multiplier));
+      this._dispatch({ type: 'SET_MAX_MODE', enabled: false }, () => this.directSim?.setMaxMode(false));
     },
 
     setMaxMode(enabled: boolean): void {
       this.maxMode = enabled;
-      this.sendCommand({ type: 'SET_MAX_MODE', enabled });
-      if (this.directSim) this.directSim.setMaxMode(enabled);
+      this._dispatch({ type: 'SET_MAX_MODE', enabled }, () => this.directSim?.setMaxMode(enabled));
     },
 
     updateTopology(scene: SceneJSON): void {
       const plainScene = JSON.parse(JSON.stringify(scene));
-      this.sendCommand({ type: 'UPDATE_TOPOLOGY', payload: plainScene });
-      if (this.directSim) this.directSim.init(scene, 50);
+      this._dispatch({ type: 'UPDATE_TOPOLOGY', payload: plainScene }, () => this.directSim?.init(scene, 50));
     },
 
     /** 批量自动运行 */
@@ -322,7 +402,9 @@ export const useSimulationStore = defineStore('simulation', {
         const sim = new Simulation({
           onFrameUpdate: () => {},
           onStatistics: () => {},
-          onEvent: () => {},
+          onEvent: (payload) => {
+            this.addEvent(payload);
+          },
         });
         sim.init(JSON.parse(JSON.stringify(scene)), 50);
         this._batchSim = sim;

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import type { ConveyorData, TransferMachineData, ForkliftData } from '../types';
 
 export type ToolType =
   | 'select'
@@ -11,7 +12,7 @@ export type ToolType =
 
 export interface ClipboardEntry {
   type: 'conveyor' | 'transfer' | 'forklift';
-  data: Record<string, unknown>;
+  data: ConveyorData | TransferMachineData | ForkliftData;
 }
 
 interface EditorState {

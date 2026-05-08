@@ -36,6 +36,7 @@ export class Simulation {
       dwellStats: { ...this.dwellStats },
       congestionEvents: [...this.congestionEvents],
       bottleneckId: this.bottleneckId,
+      totalConsumed: this.totalConsumed,
     };
   }
 
@@ -466,6 +467,7 @@ export class Simulation {
       dwellStats: { ...this.dwellStats },
       congestionEvents: [...this.congestionEvents],
       bottleneckId: this.bottleneckId,
+      totalConsumed: this.totalConsumed,
     });
   }
 
