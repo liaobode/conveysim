@@ -63,6 +63,12 @@ export class ForkliftGraphic extends PIXI.Container {
     const role = this.data.role;
     const color = role === 'generator' ? 0x4ae04a : 0x4a8ae0;
     this.body.clear();
+    if (on) {
+      this.body.lineStyle(0);
+      this.body.beginFill(0xe94560, 0.08);
+      this.body.drawRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8);
+      this.body.endFill();
+    }
     this.body.lineStyle(on ? 3 : 2, on ? 0xe94560 : color, 1);
     this.body.beginFill(role === 'generator' ? 0x0a2a0a : 0x0a1a3a, 0.8);
     this.body.drawRect(-w / 2, -h / 2, w, h);

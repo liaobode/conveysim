@@ -289,6 +289,8 @@ function setupScene(type: string): void {
   font-weight: 700;
   font-size: 16px;
   color: var(--color-primary);
+  text-shadow: 0 0 12px rgba(233, 69, 96, 0.3);
+  letter-spacing: 0.5px;
 }
 
 .controls {

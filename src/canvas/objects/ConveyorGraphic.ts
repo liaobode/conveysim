@@ -106,10 +106,17 @@ export class ConveyorGraphic extends PIXI.Container {
   setHighlight(on: boolean): void {
     this.body.clear();
     const borderColor = on ? 0xe94560 : (this.data.type === 'chain' ? 0x4a4a6a : 0x3a5a8a);
-    this.body.lineStyle(on ? 3 : 2, borderColor, 1);
-    this.body.beginFill(this.data.type === 'chain' ? 0x2a2a4a : 0x1a3a5a, 0.8);
     const lenPx = metersToPixels(this.data.length);
     const w = metersToPixels(this.data.width);
+    // 选中时绘制外发光层
+    if (on) {
+      this.body.lineStyle(0);
+      this.body.beginFill(0xe94560, 0.08);
+      this.body.drawRect(-lenPx / 2 - 4, -w / 2 - 4, lenPx + 8, w + 8);
+      this.body.endFill();
+    }
+    this.body.lineStyle(on ? 3 : 2, borderColor, 1);
+    this.body.beginFill(this.data.type === 'chain' ? 0x2a2a4a : 0x1a3a5a, 0.8);
     this.body.drawRect(-lenPx / 2, -w / 2, lenPx, w);
     this.body.endFill();
   }

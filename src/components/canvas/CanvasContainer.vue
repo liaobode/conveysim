@@ -498,7 +498,11 @@ onUnmounted(() => {
 <style scoped>
 .canvas-host {
   flex: 1;
-  background: var(--color-bg-canvas);
+  background:
+    linear-gradient(rgba(15, 52, 96, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 52, 96, 0.08) 1px, transparent 1px),
+    var(--color-bg-canvas);
+  background-size: 25px 25px;
   overflow: hidden;
   position: relative;
 }

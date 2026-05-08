@@ -75,6 +75,12 @@ export class TransferGraphic extends PIXI.Container {
   setHighlight(on: boolean): void {
     this.body.clear();
     const half = SIZE / 2;
+    if (on) {
+      this.body.lineStyle(0);
+      this.body.beginFill(0xe94560, 0.08);
+      this.body.drawRect(-half - 4, -half - 4, SIZE + 8, SIZE + 8);
+      this.body.endFill();
+    }
     this.body.lineStyle(on ? 3 : 2, on ? 0xe94560 : 0xe9a820, 1);
     this.body.beginFill(0x3a2a0a, 0.8);
     this.body.drawRect(-half, -half, SIZE, SIZE);
