@@ -3,7 +3,7 @@ import type { ConveyorData } from '../../types';
 import { ConveyorGraphic } from '../objects/ConveyorGraphic';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useEditorStore } from '../../stores/editorStore';
-import { getConveyorPort } from '../../utils/geometry';
+import { getConveyorPort, getComponentPortPos } from '../../utils/geometry';
 
 export class ConveyorLayer {
   private container: PIXI.Container;
@@ -76,26 +76,12 @@ export class ConveyorLayer {
   }
 
   private getPortPos(compId: string, portName: string): { x: number; y: number } | null {
-    const conv = this.canvasStore.conveyors[compId];
-    if (conv) {
-      const p = getConveyorPort(conv.x, conv.y, conv.rotation, conv.length, portName === 'input' ? 'input' : 'output');
-      return p;
-    }
-    const trans = this.canvasStore.transferMachines[compId];
-    if (trans) {
-      const half = 25;
-      switch (portName) {
-        case 'north': return { x: trans.x, y: trans.y - half };
-        case 'south': return { x: trans.x, y: trans.y + half };
-        case 'east': return { x: trans.x + half, y: trans.y };
-        case 'west': return { x: trans.x - half, y: trans.y };
-      }
-    }
-    const fork = this.canvasStore.forklifts[compId];
-    if (fork) {
-      return { x: fork.x + 26, y: fork.y };
-    }
-    return null;
+    return getComponentPortPos(
+      compId, portName,
+      this.canvasStore.conveyors,
+      this.canvasStore.transferMachines,
+      this.canvasStore.forklifts,
+    );
   }
 
   getGraphic(id: string): ConveyorGraphic | undefined {

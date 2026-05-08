@@ -29,6 +29,8 @@ export class CanvasManager {
   private editorStore = useEditorStore();
   private simStore = useSimulationStore();
   private worldContainer: PIXI.Container;
+  /** 避免 idle 无数据时每帧重复清除 GPU 绘制 */
+  private _idleCleared = false;
 
   constructor(host: HTMLElement) {
     try {
@@ -144,11 +146,12 @@ export class CanvasManager {
     }
 
     if (running || this.simStore.tickCount > 0) {
+      this._idleCleared = false;
       this.palletLayer.sync(this.simStore.palletStates, this.canvasStore.conveyors, this.canvasStore.transferMachines, this.canvasStore.forklifts);
       this.heatmapLayer.update(this.simStore.conveyorUtilization, this.canvasStore.conveyorList);
       this.componentLayer.updateForkliftCooldowns(this.simStore.forkliftCooldowns, this.canvasStore.forkliftList);
-    } else {
-      // 停止后清除残留
+    } else if (!this._idleCleared) {
+      this._idleCleared = true;
       this.palletLayer.sync({}, {}, {}, {});
       this.heatmapLayer.update({}, []);
       this.componentLayer.updateForkliftCooldowns({}, this.canvasStore.forkliftList);

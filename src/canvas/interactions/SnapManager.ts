@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import type { PortGeometry, PortId } from '../../types';
-import { getConveyorPort, distance } from '../../utils/geometry';
+import { getConveyorPort, distance, getComponentPortPos } from '../../utils/geometry';
 import { useCanvasStore } from '../../stores/canvasStore';
 
 const SNAP_THRESHOLD = 80;
@@ -332,21 +332,13 @@ export class SnapManager {
   }
 
   private getPortPos(compId: string, portName: string): { x: number; y: number } | null {
-    const conv = this.canvasStore.conveyors[compId];
-    if (conv) return getConveyorPort(conv.x, conv.y, conv.rotation, conv.length, portName === 'input' ? 'input' : 'output');
-    const trans = this.canvasStore.transferMachines[compId];
-    if (trans) {
-      const half = 25;
-      switch (portName) {
-        case 'north': return { x: trans.x, y: trans.y - half };
-        case 'south': return { x: trans.x, y: trans.y + half };
-        case 'east': return { x: trans.x + half, y: trans.y };
-        case 'west': return { x: trans.x - half, y: trans.y };
-      }
-    }
-    const fork = this.canvasStore.forklifts[compId];
-    if (fork) return { x: fork.x + 26, y: fork.y };
-    return null;
+    return getComponentPortPos(
+      compId, portName,
+      this.canvasStore.conveyors,
+      this.canvasStore.transferMachines,
+      this.canvasStore.forklifts,
+    );
+  }
   }
 
   private pointToSegmentDist(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {

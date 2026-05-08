@@ -44,6 +44,35 @@ export function getConveyorPort(
   };
 }
 
+/** 获取任意组件的端口世界坐标 */
+export function getComponentPortPos(
+  compId: string,
+  portName: string,
+  conveyors: Record<string, { x: number; y: number; rotation: number; length: number }>,
+  transfers: Record<string, { x: number; y: number }>,
+  forklifts: Record<string, { x: number; y: number }>,
+): Point | null {
+  const conv = conveyors[compId];
+  if (conv) {
+    return getConveyorPort(conv.x, conv.y, conv.rotation, conv.length, portName === 'input' ? 'input' : 'output');
+  }
+  const trans = transfers[compId];
+  if (trans) {
+    const half = 25;
+    switch (portName) {
+      case 'north': return { x: trans.x, y: trans.y - half };
+      case 'south': return { x: trans.x, y: trans.y + half };
+      case 'east': return { x: trans.x + half, y: trans.y };
+      case 'west': return { x: trans.x - half, y: trans.y };
+    }
+  }
+  const fork = forklifts[compId];
+  if (fork) {
+    return { x: fork.x + 26, y: fork.y };
+  }
+  return null;
+}
+
 /** 两点之间的距离 */
 export function distance(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
