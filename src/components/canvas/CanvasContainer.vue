@@ -460,7 +460,6 @@ onMounted(() => {
   const draft = loadDraft();
   if (draft && draft.conveyors && draft.conveyors.length > 0) {
     canvasStore.loadFromJSON(draft);
-    console.log('[Draft] 已恢复上次的草稿');
   }
 
   const host = canvasHost.value;

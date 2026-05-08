@@ -90,10 +90,6 @@ onUnmounted(() => {
 
 function onStart(): void {
   const scene = canvasStore.toJSON();
-  console.log('[Header] Starting sim, conv=' + scene.conveyors.length +
-    ' trans=' + scene.transferMachines.length +
-    ' fork=' + scene.forklifts.length +
-    ' conn=' + scene.connections.length);
   simStore.initWorker(scene);
   simStore.start();
 }

@@ -112,11 +112,6 @@ export class Simulation {
       this.downstreamMap.set(key, conn.to.componentId);
     }
 
-    // 诊断日志
-    console.log('[Sim] init: conv=' + this.conveyors.size +
-      ' trans=' + this.transfers.size +
-      ' fork=' + this.forklifts.size +
-      ' conn=' + this.downstreamMap.size);
   }
 
   private getDownstream(componentId: string, port = 'output'): DownstreamTarget {
@@ -158,7 +153,6 @@ export class Simulation {
     if (this.running) return;
     this.running = true;
     this.paused = false;
-    console.log('[Sim] start called, conv=' + this.conveyors.size + ' fork=' + this.forklifts.size);
     this.loop();
   }
 
@@ -342,9 +336,6 @@ export class Simulation {
 
     this.checkCongestion();
 
-    if (this.tickNumber % 20 === 1) {
-      console.log('[Sim] tick=' + this.tickNumber + ' simTime=' + this.simTime.toFixed(1) + ' pallets=' + this.pallets.size);
-    }
 
     if (!this.skipNextFrameUpdate) {
       this.sendFrameUpdate();

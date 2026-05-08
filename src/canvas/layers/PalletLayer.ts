@@ -86,7 +86,8 @@ export class PalletLayer {
       const startOffset = -totalZoneLen / 2 + zoneSpacingPx / 2;
 
       // progressInZone=0 表示刚进入分区(起点), =1 表示到达分区末端
-      const inZoneOffset = (state.progressInZone - 0.5) * zoneSpacingPx;
+      const flowSign = state.reverseFlow ? -1 : 1;
+      const inZoneOffset = (state.progressInZone - 0.5) * zoneSpacingPx * flowSign;
       const localX = startOffset + state.currentZoneIndex * zoneSpacingPx + inZoneOffset;
 
       const cos = Math.cos(conveyor.rotation);

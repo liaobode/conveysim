@@ -35,6 +35,8 @@ interface SimulationState {
   multiRunResults: { throughput: number; maxUtil: Record<string, number> }[];
   /** 批量运行时当前正在跑的 sim 实例，用于即时停止 */
   _batchSim: Simulation | null;
+  /** 批量运行取消标志，避免 status/multiRunTotal 复合判断的竞态 */
+  _batchCancelled: boolean;
 }
 
 export const useSimulationStore = defineStore('simulation', {
@@ -59,6 +61,7 @@ export const useSimulationStore = defineStore('simulation', {
     multiRunCurrent: 0,
     multiRunResults: [],
     _batchSim: null,
+    _batchCancelled: false,
   }),
 
   actions: {
@@ -97,8 +100,6 @@ export const useSimulationStore = defineStore('simulation', {
       try {
         const url = new URL('../engine/worker.ts', import.meta.url);
         this.worker = new Worker(url, { type: 'module' });
-        console.log('[Store] Worker created at:', url.href);
-
         this.worker.onerror = (e: ErrorEvent) => {
           useUIStore().addToast('Worker 错误: ' + e.message + '，已回退到主线程', 'error');
           cancelFallback();
@@ -118,7 +119,6 @@ export const useSimulationStore = defineStore('simulation', {
 
           switch (msg.type) {
             case 'READY':
-              console.log('[Store] Worker ready (Worker mode active)');
               break;
             case 'FRAME_UPDATE': {
               const { pallets, zoneStates, forkliftCooldowns, tickNumber, simTime } = msg.payload;
@@ -179,7 +179,6 @@ export const useSimulationStore = defineStore('simulation', {
         this.worker.terminate();
         this.worker = null;
       }
-      console.log('[Store] Starting direct simulation on main thread');
       this.directSim = new Simulation({
         onFrameUpdate: (payload) => {
           const { pallets, zoneStates, forkliftCooldowns, tickNumber, simTime } = payload;
@@ -245,12 +244,8 @@ export const useSimulationStore = defineStore('simulation', {
       }
       // 停止仿真，保留分析数据供查看
       this.status = 'idle';
-      this.tickCount = 0;
-      this.palletStates = {};
-      this.zoneStates = {};
-      this.forkliftCooldowns = {};
+      this._batchCancelled = true;
       this.multiRunTotal = 0;
-      this.multiRunResults = [];
       if (this._batchSim) {
         this._batchSim.stop();
         this._batchSim = null;
@@ -305,6 +300,7 @@ export const useSimulationStore = defineStore('simulation', {
 
     /** 批量自动运行 */
     async runBatch(scene: SceneJSON, totalRuns: number, timeLimitSec: number): Promise<void> {
+      this._batchCancelled = false;
       this.multiRunTotal = totalRuns;
       this.multiRunCurrent = 0;
       this.multiRunResults = [];
@@ -312,7 +308,7 @@ export const useSimulationStore = defineStore('simulation', {
 
       for (let i = 0; i < totalRuns; i++) {
         // 检查是否被取消
-        if ((this.status as string) === 'idle' && this.multiRunTotal === 0) {
+        if (this._batchCancelled) {
           this.multiRunResults = [];
           return;
         }
@@ -335,7 +331,7 @@ export const useSimulationStore = defineStore('simulation', {
         // 分段等待，允许 UI 更新 + 检查取消信号
         await new Promise<void>((resolve) => {
           const check = setInterval(() => {
-            if ((this.status as string) === 'idle' && this.multiRunTotal === 0) {
+            if (this._batchCancelled) {
               // 被停止
               sim.stop();
               clearInterval(check);
@@ -350,7 +346,7 @@ export const useSimulationStore = defineStore('simulation', {
           }, 30);
         });
 
-        if (this.multiRunTotal === 0) return;
+        if (this._batchCancelled) return;
 
         // 收集结果
         const stats = sim.getStats();

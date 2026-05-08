@@ -15,6 +15,7 @@ const dialogRef = ref<HTMLElement>();
 async function handleLoad(): Promise<void> {
   try {
     const scene = await uploadJSON();
+    canvasStore.pushUndoSnapshot();
     canvasStore.loadFromJSON(scene);
     useEditorStore().requestFitView();
     emit('close');

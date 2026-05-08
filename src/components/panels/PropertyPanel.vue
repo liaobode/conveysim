@@ -189,8 +189,10 @@ function deleteComponent(): void {
         :value="transferData.defaultRoute"
         @change="updateTransfer({ defaultRoute: ($event.target as HTMLSelectElement).value })"
       >
-        <option value="straight">直行</option>
-        <option value="turn">转向</option>
+        <option value="north">北 (↑)</option>
+        <option value="south">南 (↓)</option>
+        <option value="east">东 (→)</option>
+        <option value="west">西 (←)</option>
       </select>
 
       <label>旋转货物方向</label>

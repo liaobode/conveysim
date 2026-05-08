@@ -11,7 +11,7 @@ const emit = defineEmits<{
 }>();
 
 const newDest = ref('');
-const newAction = ref('straight');
+const newAction = ref('south');
 
 function addRule(): void {
   const dest = newDest.value.trim();
@@ -25,6 +25,18 @@ function removeRule(dest: string): void {
   const updated = { ...props.routingTable };
   delete updated[dest];
   emit('update', updated);
+}
+
+function portLabel(port: string): string {
+  const labels: Record<string, string> = {
+    north: '北',
+    south: '南',
+    east: '东',
+    west: '西',
+    straight: '直行',
+    turn: '转向',
+  };
+  return labels[port] ?? port;
 }
 </script>
 
@@ -43,7 +55,7 @@ function removeRule(dest: string): void {
     >
       <span class="dest">{{ dest }}</span>
       <span class="arrow">&rarr;</span>
-      <span class="action">{{ action === 'straight' ? '直行' : '转向' }}</span>
+      <span class="action">{{ portLabel(action) }}</span>
       <button :disabled="props.disabled" class="btn-remove" @click="removeRule(dest)">x</button>
     </div>
 
@@ -56,8 +68,10 @@ function removeRule(dest: string): void {
         @keyup.enter="addRule"
       />
       <select :disabled="props.disabled" v-model="newAction" class="action-select">
-        <option value="straight">直行</option>
-        <option value="turn">转向</option>
+        <option value="north">北 (↑)</option>
+        <option value="south">南 (↓)</option>
+        <option value="east">东 (→)</option>
+        <option value="west">西 (←)</option>
       </select>
       <button :disabled="props.disabled" class="btn-add" @click="addRule">+</button>
     </div>

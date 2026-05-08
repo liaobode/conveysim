@@ -98,7 +98,7 @@ export const useCanvasStore = defineStore('canvas', {
         id, label: '', x, y,
         actionTime: 2,
         routingTable: {},
-        defaultRoute: 'straight',
+        defaultRoute: 'south',
         rotatePallet: false,
       };
       this.version++;
