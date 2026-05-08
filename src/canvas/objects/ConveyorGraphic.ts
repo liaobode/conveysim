@@ -91,10 +91,11 @@ export class ConveyorGraphic extends PIXI.Container {
       this.arrow.endFill();
     }
 
-    // ID 标签
-    const shortId = data.id.slice(-4);
-    this.label.text = shortId;
-    this.label.style.fill = data.type === 'chain' ? 0x8a8aaa : 0x6a8a9a;
+    // 标签：优先显示自定义标签，否则显示 ID 后4位
+    const displayLabel = data.label || data.id.slice(-4);
+    this.label.text = displayLabel;
+    this.label.style.fill = data.label ? 0xe0e0e0 : (data.type === 'chain' ? 0x8a8aaa : 0x6a8a9a);
+    this.label.style.fontWeight = data.label ? 'bold' : 'normal';
     this.label.position.set(0, -w / 2 - 12);
 
     this.position.set(data.x, data.y);

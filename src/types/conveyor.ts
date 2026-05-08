@@ -4,6 +4,7 @@ export type ConveyorDirection = 'forward' | 'bidirectional';
 
 export interface ConveyorData {
   id: string;
+  label: string;
   type: ConveyorType;
   x: number;
   y: number;

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import HeatmapLegend from './HeatmapLegend.vue';
@@ -10,7 +11,12 @@ const canvasStore = useCanvasStore();
 
 const convLabel = (id: string): string => {
   const c = canvasStore.conveyors[id];
-  return c ? `${c.type === 'chain' ? '链条' : '滚筒'} ${id.slice(-4)}` : id;
+  if (c) return c.label || `${c.type === 'chain' ? '链条' : '滚筒'} ${id.slice(-4)}`;
+  const t = canvasStore.transferMachines[id];
+  if (t) return t.label || `移载机 ${id.slice(-4)}`;
+  const f = canvasStore.forklifts[id];
+  if (f) return f.label || `${f.role === 'generator' ? '发生器' : '消费者'} ${id.slice(-4)}`;
+  return id;
 };
 
 const simTimeFormatted = computed(() => {
@@ -48,6 +54,8 @@ const bottleneckLabel = computed(() => {
   return convLabel(simStore.bottleneckId);
 });
 
+const panelCollapsed = ref(false);
+
 const hasData = computed(() =>
   simStore.status === 'running' ||
   simStore.status === 'paused' ||
@@ -80,8 +88,13 @@ function exportReport(): void {
 
 <template>
   <div class="data-panel">
-    <div class="panel-title">仿真数据</div>
+    <div class="panel-title" @click="panelCollapsed = !panelCollapsed">
+      仿真数据
+      <ChevronUp v-if="!panelCollapsed" :size="14" />
+      <ChevronDown v-else :size="14" />
+    </div>
 
+    <div v-show="!panelCollapsed">
     <div v-if="!hasData" class="placeholder">运行仿真后将在此处查看<br>吞吐量、利用率、停留时间等分析数据</div>
 
     <div v-else class="stats">
@@ -166,6 +179,7 @@ function exportReport(): void {
       <!-- 导出 -->
       <button class="btn-export" @click="exportReport">导出报告</button>
     </div>
+    </div>
   </div>
 </template>
 
@@ -181,6 +195,15 @@ function exportReport(): void {
   text-transform: uppercase;
   letter-spacing: 1px;
   padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-title:hover {
+  opacity: 0.8;
 }
 
 .placeholder { color: var(--color-fg-dim); font-size: 13px; }

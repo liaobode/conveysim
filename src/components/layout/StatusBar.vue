@@ -2,17 +2,19 @@
 import { computed } from 'vue';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { useEditorStore } from '../../stores/editorStore';
+import { useCanvasStore } from '../../stores/canvasStore';
 import { pixelsToMeters } from '../../utils/geometry';
 
 const simStore = useSimulationStore();
 const editorStore = useEditorStore();
+const canvasStore = useCanvasStore();
 
 const statusText = computed(() => {
   if (simStore.multiRunTotal > 0) {
     return `批量运行: ${simStore.multiRunCurrent}/${simStore.multiRunTotal}`;
   }
   switch (simStore.status) {
-    case 'idle': return '就绪';
+    case 'idle': return `就绪 — ${compCount.value} 个组件`;
     case 'running': return `运行中 — Tick: ${simStore.tickCount} — 托盘: ${Object.keys(simStore.palletStates).length}`;
     case 'paused': return '已暂停';
   }
@@ -42,6 +44,10 @@ const batchProgress = computed(() => {
 });
 
 const isBatching = computed(() => simStore.multiRunTotal > 0);
+
+const compCount = computed(() => {
+  return canvasStore.conveyorList.length + canvasStore.transferList.length + canvasStore.forkliftList.length;
+});
 
 const mousePos = computed(() => {
   const p = editorStore.mouseWorldPos;

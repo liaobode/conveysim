@@ -7,6 +7,7 @@ export class TransferGraphic extends PIXI.Container {
   transferId: string;
   private body: PIXI.Graphics;
   private portLabels: PIXI.Container;
+  private nameText: PIXI.Text;
 
   constructor(data: TransferMachineData) {
     super();
@@ -14,7 +15,14 @@ export class TransferGraphic extends PIXI.Container {
 
     this.body = new PIXI.Graphics();
     this.portLabels = new PIXI.Container();
-    this.addChild(this.body, this.portLabels);
+    this.nameText = new PIXI.Text('', {
+      fontSize: 10,
+      fill: 0xe0e0e0,
+      fontFamily: 'sans-serif',
+    });
+    this.nameText.anchor.set(0.5);
+    this.nameText.position.set(0, -SIZE / 2 - 14);
+    this.addChild(this.body, this.portLabels, this.nameText);
     this.draw(data);
   }
 
@@ -31,6 +39,10 @@ export class TransferGraphic extends PIXI.Container {
     this.body.lineStyle(0);
     this.body.drawCircle(0, 0, 12);
     this.body.endFill();
+
+    // 标签：优先显示自定义标签，否则显示 ID 后4位
+    this.nameText.text = data.label || data.id.slice(-4);
+    this.nameText.style.fill = data.label ? 0xe0e0e0 : 0x888888;
 
     // 端口标签
     this.portLabels.removeChildren();

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useEditorStore } from '../../stores/editorStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useSimulationStore } from '../../stores/simulationStore';
@@ -11,6 +12,7 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 const flashFields = ref<Record<string, boolean>>({});
+const panelCollapsed = ref(false);
 
 function clampWithFlash(field: string, v: number, min: number, max: number): number {
   const clamped = clamp(v, min, max);
@@ -81,8 +83,13 @@ function deleteComponent(): void {
 
 <template>
   <aside class="property-panel">
-    <div class="panel-title">属性</div>
+    <div class="panel-title" @click="panelCollapsed = !panelCollapsed">
+      属性
+      <ChevronUp v-if="!panelCollapsed" :size="14" />
+      <ChevronDown v-else :size="14" />
+    </div>
 
+    <div v-show="!panelCollapsed">
     <!-- 锁定 -->
     <p v-if="simStore.status !== 'idle' || simStore.multiRunTotal > 0" class="locked">仿真运行中，编辑已锁定</p>
 
@@ -95,6 +102,14 @@ function deleteComponent(): void {
 
     <!-- 输送机属性 -->
     <div v-if="selection.kind === 'conveyor' && conveyorData" class="form">
+      <label>标签</label>
+      <input
+        type="text"
+        :value="conveyorData.label"
+        placeholder="输入标签名称"
+        @change="updateConveyor({ label: ($event.target as HTMLInputElement).value })"
+      />
+
       <label>类型</label>
       <p class="readonly">{{ conveyorData.type === 'chain' ? '链条输送机' : '滚筒输送机' }}</p>
 
@@ -146,6 +161,14 @@ function deleteComponent(): void {
 
     <!-- 移载机属性 -->
     <div v-if="selection.kind === 'transfer' && transferData" class="form">
+      <label>标签</label>
+      <input
+        type="text"
+        :value="transferData.label"
+        placeholder="输入标签名称"
+        @change="updateTransfer({ label: ($event.target as HTMLInputElement).value })"
+      />
+
       <label>动作时间 (秒)</label>
       <input
         type="number"
@@ -181,6 +204,14 @@ function deleteComponent(): void {
 
     <!-- 叉车属性 -->
     <div v-if="selection.kind === 'forklift' && forkliftData" class="form">
+      <label>标签</label>
+      <input
+        type="text"
+        :value="forkliftData.label"
+        placeholder="输入标签名称"
+        @change="updateForklift({ label: ($event.target as HTMLInputElement).value })"
+      />
+
       <label>角色</label>
       <p class="readonly">{{ forkliftData.role === 'generator' ? '上料口 (Generator)' : '下料口 (Consumer)' }}</p>
 
@@ -238,6 +269,7 @@ function deleteComponent(): void {
     >
       删除组件
     </button>
+    </div>
   </aside>
 </template>
 
@@ -254,6 +286,15 @@ function deleteComponent(): void {
   text-transform: uppercase;
   letter-spacing: 1px;
   padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-title:hover {
+  opacity: 0.8;
 }
 
 .placeholder {

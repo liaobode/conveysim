@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useCanvasStore } from '../../stores/canvasStore';
+import { useEditorStore } from '../../stores/editorStore';
 import { uploadJSON } from '../../utils/persistence';
 import { trapFocus } from '../../utils/focusTrap';
 
@@ -15,6 +16,7 @@ async function handleLoad(): Promise<void> {
   try {
     const scene = await uploadJSON();
     canvasStore.loadFromJSON(scene);
+    useEditorStore().requestFitView();
     emit('close');
   } catch {
     // 用户取消或文件无效

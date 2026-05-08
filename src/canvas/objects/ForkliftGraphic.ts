@@ -38,18 +38,20 @@ export class ForkliftGraphic extends PIXI.Container {
     this.body.lineTo(w / 2 + 12, h / 2 - 4);
     this.body.lineTo(w / 2, h / 2);
 
-    // 标签：移除旧的再添加新的
-    const label = data.role === 'generator' ? '上料' : '下料';
+    // 标签：优先显示自定义标签，否则显示角色名称
+    const label = data.label || (data.role === 'generator' ? '上料' : '下料');
     const oldText = this.getChildAt(this.children.length - 1);
     if (oldText instanceof PIXI.Text) {
       oldText.destroy();
     }
     const text = new PIXI.Text(label, {
-      fontSize: 11,
+      fontSize: 10,
       fill: color,
       fontFamily: 'sans-serif',
+      fontWeight: data.label ? 'bold' : 'normal',
     });
     text.anchor.set(0.5);
+    text.y = -18;
     this.addChild(text);
 
     this.position.set(data.x, data.y);

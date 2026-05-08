@@ -26,6 +26,7 @@ interface EditorState {
   mouseWorldPos: { x: number; y: number };
   shiftHeld: boolean;
   clipboard: ClipboardEntry[];
+  fitViewCounter: number;
 }
 
 export const useEditorStore = defineStore('editor', {
@@ -41,6 +42,7 @@ export const useEditorStore = defineStore('editor', {
     mouseWorldPos: { x: 0, y: 0 },
     shiftHeld: false,
     clipboard: [],
+    fitViewCounter: 0,
   }),
 
   getters: {
@@ -97,6 +99,10 @@ export const useEditorStore = defineStore('editor', {
 
     clearClipboard(): void {
       this.clipboard = [];
+    },
+
+    requestFitView(): void {
+      this.fitViewCounter++;
     },
   },
 });

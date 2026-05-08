@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useUIStore } from './stores/uiStore';
 import AppHeader from './components/layout/AppHeader.vue';
 import Toolbar from './components/layout/Toolbar.vue';
@@ -30,15 +30,50 @@ function onBatchStart(rounds: number, timePerRound: number): void {
   const scene = canvasStore.toJSON();
   simStore.runBatch(scene, rounds, timePerRound);
 }
+
+// 可拖拽面板宽度
+const toolbarWidth = ref(140);
+const rightPanelWidth = ref(240);
+let dragTarget: 'toolbar' | 'right' | null = null;
+
+function onDividerDown(target: 'toolbar' | 'right', e: MouseEvent): void {
+  dragTarget = target;
+  e.preventDefault();
+}
+
+function onMouseMove(e: MouseEvent): void {
+  if (!dragTarget) return;
+  if (dragTarget === 'toolbar') {
+    toolbarWidth.value = Math.max(100, Math.min(300, e.clientX));
+  } else {
+    rightPanelWidth.value = Math.max(180, Math.min(480, window.innerWidth - e.clientX));
+  }
+}
+
+function onMouseUp(): void {
+  dragTarget = null;
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onMouseMove);
+  window.removeEventListener('mouseup', onMouseUp);
+});
 </script>
 
 <template>
   <div class="app-layout">
     <AppHeader />
     <div class="app-body">
-      <Toolbar ref="toolbarRef" />
+      <Toolbar ref="toolbarRef" :style="{ width: toolbarWidth + 'px' }" />
+      <div class="divider" @mousedown="onDividerDown('toolbar', $event)"></div>
       <CanvasContainer />
-      <aside class="right-panel" role="complementary" aria-label="属性和数据面板">
+      <div class="divider" @mousedown="onDividerDown('right', $event)"></div>
+      <aside class="right-panel" role="complementary" aria-label="属性和数据面板" :style="{ width: rightPanelWidth + 'px' }">
         <PropertyPanel />
         <DataPanel />
       </aside>
@@ -74,8 +109,19 @@ function onBatchStart(rounds: number, timePerRound: number): void {
   overflow: hidden;
 }
 
+.divider {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.divider:hover {
+  background: var(--color-border);
+}
+
 .right-panel {
-  width: 240px;
   background: var(--color-bg-surface);
   border-left: 1px solid var(--color-border);
   flex-shrink: 0;

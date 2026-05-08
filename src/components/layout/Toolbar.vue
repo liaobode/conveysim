@@ -88,8 +88,8 @@ defineExpose({ refreshScenes });
 
 <style scoped>
 .toolbar {
-  width: 140px;
   background: var(--color-bg-surface);
+  flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   flex-shrink: 0;
   padding: 8px;

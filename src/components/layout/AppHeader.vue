@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useSimulationStore } from '../../stores/simulationStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useEditorStore } from '../../stores/editorStore';
+import { Play, Pause, Square, StepForward, FastForward, FolderOpen, Save, Trash2, FlaskConical, HelpCircle } from 'lucide-vue-next';
 
 const simStore = useSimulationStore();
 const canvasStore = useCanvasStore();
@@ -158,6 +160,8 @@ function setupTestCircuit(): void {
   canvasStore.addConnection(conv1Id, 'output', transId, 'west');
   canvasStore.addConnection(transId, 'south', conv2Id, 'input');
   canvasStore.addConnection(conv2Id, 'output', consId, 'input');
+
+  useEditorStore().requestFitView();
 }
 </script>
 
@@ -165,40 +169,40 @@ function setupTestCircuit(): void {
   <header class="app-header" role="banner" aria-label="主工具栏">
     <span class="logo">ConveySim</span>
     <div class="controls">
-      <button class="btn" title="搭建测试回路" @click="setupTestCircuit">&#9881; 测试</button>
-      <button class="btn" title="导入场景" @click="uiStore.openLoadDialog()">&#128193; 导入</button>
-      <button class="btn" title="保存场景" @click="uiStore.openSaveDialog()">&#128190; 保存</button>
+      <button class="btn" title="搭建测试回路" @click="setupTestCircuit"><FlaskConical :size="14" /> 测试</button>
+      <button class="btn" title="导入场景" @click="uiStore.openLoadDialog()"><FolderOpen :size="14" /> 导入</button>
+      <button class="btn" title="保存场景" @click="uiStore.openSaveDialog()"><Save :size="14" /> 保存</button>
       <button
         class="btn"
         :disabled="simStore.status !== 'idle'"
         title="一键清空画布"
         @click="onClear"
-      >&#128465; 清空</button>
+      ><Trash2 :size="14" /> 清空</button>
       <span class="sep"></span>
       <button
         class="btn"
         :disabled="simStore.status !== 'idle'"
         title="启动仿真"
         @click="onStart"
-      >&#9654; 启动</button>
+      ><Play :size="14" /> 启动</button>
       <button
         class="btn"
         :disabled="simStore.status === 'idle'"
         :title="simStore.status === 'running' ? '暂停' : '继续'"
         @click="onPause"
-      >{{ simStore.status === 'running' ? '&#9646;&#9646; 暂停' : '&#9654; 继续' }}</button>
+      ><template v-if="simStore.status === 'running'"><Pause :size="14" /> 暂停</template><template v-else><Play :size="14" /> 继续</template></button>
       <button
         class="btn"
         :disabled="simStore.status === 'idle'"
         title="停止仿真"
         @click="onStop"
-      >&#9632; 停止</button>
+      ><Square :size="14" /> 停止</button>
       <button
         class="btn"
         :disabled="simStore.status === 'running'"
         title="单步推进一帧"
         @click="onStep"
-      >&#9654;| 单步</button>
+      ><StepForward :size="14" /> 单步</button>
       <div class="speed-wrap" @click.stop>
         <button class="btn speed-btn" title="选择仿真速度" @click="toggleSpeedMenu" @keydown="onSpeedKeydown">{{ currentSpeedLabel() }}</button>
         <div v-if="speedMenuOpen" class="speed-dropdown" @click.stop>
@@ -221,9 +225,9 @@ function setupTestCircuit(): void {
         :disabled="simStore.status === 'running' && simStore.multiRunTotal === 0"
         title="批量自动运行"
         @click="onBatchRun"
-      >&#9654;&#9654; 批量</button>
+      ><FastForward :size="14" /> 批量</button>
       <span class="sep"></span>
-      <button class="btn" title="键盘快捷键 (?)" @click="uiStore.shortcutPanelVisible = true">?</button>
+      <button class="btn" title="键盘快捷键" @click="uiStore.shortcutPanelVisible = true"><HelpCircle :size="14" /> 帮助</button>
     </div>
   </header>
 </template>
@@ -256,6 +260,9 @@ function setupTestCircuit(): void {
   height: 28px;
   padding: 0 8px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-base);
   color: var(--color-fg-primary);

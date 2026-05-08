@@ -30,6 +30,7 @@ export const useCanvasStore = defineStore('canvas', {
     connections: {},
     version: 0,
     undoStack: [],
+    redoStack: [] as string[],
   }),
 
   getters: {
@@ -79,7 +80,7 @@ export const useCanvasStore = defineStore('canvas', {
     addConveyor(type: ConveyorData['type'], x: number, y: number, rotation = 0): string {
       const id = generateId('conv');
       const data: ConveyorData = {
-        id, type, x, y, rotation,
+        id, label: '', type, x, y, rotation,
         length: 3,
         width: 0.8,
         speed: 0.5,
@@ -94,7 +95,7 @@ export const useCanvasStore = defineStore('canvas', {
     addTransferMachine(x: number, y: number): string {
       const id = generateId('trans');
       this.transferMachines[id] = {
-        id, x, y,
+        id, label: '', x, y,
         actionTime: 2,
         routingTable: {},
         defaultRoute: 'straight',
@@ -107,7 +108,7 @@ export const useCanvasStore = defineStore('canvas', {
     addForklift(x: number, y: number, role: ForkliftData['role']): string {
       const id = generateId('fork');
       this.forklifts[id] = {
-        id, x, y, role,
+        id, label: '', x, y, role,
         interval: 60,
         fluctuation: 0,
         destinationTag: role === 'generator' ? 'sink-default' : '',
@@ -206,12 +207,29 @@ export const useCanvasStore = defineStore('canvas', {
       if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === json) return;
       this.undoStack.push(json);
       if (this.undoStack.length > MAX_UNDO) this.undoStack.shift();
+      // 新操作清空重做栈
+      this.redoStack = [];
     },
 
     /** Ctrl+Z 撤销 */
     undo(): boolean {
       if (this.undoStack.length === 0) return false;
+      // 当前状态存入重做栈
+      const current = JSON.stringify(this.toJSON());
+      this.redoStack.push(current);
       const json = this.undoStack.pop()!;
+      const scene = JSON.parse(json) as SceneJSON;
+      this.loadFromJSON(scene);
+      return true;
+    },
+
+    /** Ctrl+Y 重做 */
+    redo(): boolean {
+      if (this.redoStack.length === 0) return false;
+      // 当前状态存入撤销栈
+      const current = JSON.stringify(this.toJSON());
+      this.undoStack.push(current);
+      const json = this.redoStack.pop()!;
       const scene = JSON.parse(json) as SceneJSON;
       this.loadFromJSON(scene);
       return true;

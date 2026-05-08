@@ -2,6 +2,7 @@ export type ForkliftRole = 'generator' | 'consumer';
 
 export interface ForkliftData {
   id: string;
+  label: string;
   x: number;
   y: number;
   role: ForkliftRole;

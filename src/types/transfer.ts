@@ -1,5 +1,6 @@
 export interface TransferMachineData {
   id: string;
+  label: string;
   x: number;
   y: number;
   actionTime: number;

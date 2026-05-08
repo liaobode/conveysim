@@ -11,7 +11,8 @@ import { useCanvasStore } from '../stores/canvasStore';
 import { useEditorStore } from '../stores/editorStore';
 
 export class CanvasManager {
-  app: PIXI.Application;
+  app!: PIXI.Application;
+  hasRenderer = true;
   gridLayer: GridLayer;
   conveyorLayer: ConveyorLayer;
   componentLayer: ComponentLayer;
@@ -20,7 +21,9 @@ export class CanvasManager {
   selection: SelectionManager;
   snap: SnapManager;
   private rubberBand: PIXI.Graphics;
-  private lockOverlay: PIXI.Graphics;
+  private lockOverlay: PIXI.Container;
+  private lockBg: PIXI.Graphics;
+  private lockText: PIXI.Text;
 
   private canvasStore = useCanvasStore();
   private editorStore = useEditorStore();
@@ -28,15 +31,25 @@ export class CanvasManager {
   private worldContainer: PIXI.Container;
 
   constructor(host: HTMLElement) {
-    this.app = new PIXI.Application({
-      width: host.clientWidth,
-      height: host.clientHeight,
-      backgroundColor: 0x0a0a1a,
-      antialias: true,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
-    });
-    host.appendChild(this.app.view as unknown as HTMLElement);
+    try {
+      this.app = new PIXI.Application({
+        width: host.clientWidth,
+        height: host.clientHeight,
+        backgroundColor: 0x0a0a1a,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      });
+      host.appendChild(this.app.view as unknown as HTMLElement);
+    } catch {
+      // WebGL 不可用时的降级提示
+      this.hasRenderer = false;
+      const msg = document.createElement('div');
+      msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#e94560;font-size:18px;text-align:center;padding:40px;';
+      msg.innerHTML = '浏览器不支持 WebGL<br><small style="color:#888">请使用最新版 Chrome / Firefox / Edge</small>';
+      host.appendChild(msg);
+      return;
+    }
 
     // 世界容器：所有游戏对象均挂在此下，通过改变其 transform 实现视口
     this.worldContainer = new PIXI.Container();
@@ -62,7 +75,16 @@ export class CanvasManager {
     this.worldContainer.addChild(this.rubberBand);
 
     // 仿真锁定遮罩（最顶层，默认隐藏）
-    this.lockOverlay = new PIXI.Graphics();
+    this.lockOverlay = new PIXI.Container();
+    this.lockBg = new PIXI.Graphics();
+    this.lockText = new PIXI.Text('仿真运行中 — 编辑已锁定', {
+      fontSize: 14,
+      fill: 0xe94560,
+      fontFamily: 'sans-serif',
+      fontWeight: 'bold',
+    });
+    this.lockText.anchor.set(0.5);
+    this.lockOverlay.addChild(this.lockBg, this.lockText);
     this.lockOverlay.visible = false;
     this.worldContainer.addChild(this.lockOverlay);
 
@@ -78,6 +100,7 @@ export class CanvasManager {
 
   /** 同步视口变换 */
   syncViewport(): void {
+    if (!this.hasRenderer) return;
     const { x, y, scale } = this.editorStore.viewport;
     this.worldContainer.x = x;
     this.worldContainer.y = y;
@@ -86,6 +109,7 @@ export class CanvasManager {
 
   /** 刷新输送机层（编辑后调用） */
   refreshConveyors(): void {
+    if (!this.hasRenderer) return;
     this.conveyorLayer.sync(this.canvasStore.conveyorList);
   }
 
@@ -98,16 +122,25 @@ export class CanvasManager {
   }
 
   private onTick = (): void => {
+    if (!this.hasRenderer) return;
     const running = this.simStore.status === 'running' || this.simStore.status === 'paused';
     const locked = this.simStore.status !== 'idle' || this.simStore.multiRunTotal > 0;
 
     // 仿真锁定遮罩
     this.lockOverlay.visible = locked;
     if (locked) {
-      this.lockOverlay.clear();
-      this.lockOverlay.beginFill(0x000000, 0.03);
-      this.lockOverlay.drawRect(-10000, -10000, 20000, 20000);
-      this.lockOverlay.endFill();
+      this.lockBg.clear();
+      this.lockBg.beginFill(0x000000, 0.05);
+      this.lockBg.drawRect(-10000, -10000, 20000, 20000);
+      this.lockBg.endFill();
+
+      // 文字位于视口左上角
+      const { x, y, scale } = this.editorStore.viewport;
+      const app = this.app;
+      const lx = (24 - x) / scale;
+      const ly = (8 - y) / scale;
+      this.lockText.position.set(lx, ly);
+      this.lockText.anchor.set(0, 0);
     }
 
     if (running || this.simStore.tickCount > 0) {
@@ -145,11 +178,13 @@ export class CanvasManager {
   }
 
   resize(width: number, height: number): void {
+    if (!this.hasRenderer) return;
     this.app.renderer.resize(width, height);
   }
 
   destroy(): void {
     window.removeEventListener('resize', this.onResize);
+    if (!this.hasRenderer) return;
     this.app.destroy(false, { children: true });
   }
 

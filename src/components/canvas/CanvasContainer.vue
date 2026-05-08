@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { CanvasManager } from '../../canvas/CanvasManager';
+import { Maximize2 } from 'lucide-vue-next';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useEditorStore } from '../../stores/editorStore';
 import { useSimulationStore } from '../../stores/simulationStore';
@@ -13,6 +14,10 @@ let canvasManager: CanvasManager | null = null;
 const canvasStore = useCanvasStore();
 const editorStore = useEditorStore();
 const simStore = useSimulationStore();
+
+// 悬停 tooltip
+const tooltip = ref({ visible: false, text: '', x: 0, y: 0 });
+let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** 仿真运行时锁定编辑 */
 const editingLocked = () => simStore.status !== 'idle' || simStore.multiRunTotal > 0;
@@ -114,6 +119,31 @@ function onMouseMove(e: MouseEvent): void {
       canvasManager.selection.handleMouseMove(pos.x, pos.y);
     }
   }
+
+  // 悬停 tooltip（延时 300ms 显示）
+  if (tooltipTimer) clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(() => {
+    const hit = canvasManager?.selection.hitTest(pos.x, pos.y);
+    if (hit) {
+      const label = getComponentLabel(hit);
+      if (label) {
+        const rect = canvasHost.value?.getBoundingClientRect();
+        tooltip.value = { visible: true, text: label, x: e.clientX + 12, y: e.clientY - 12 };
+        return;
+      }
+    }
+    tooltip.value.visible = false;
+  }, 300);
+}
+
+function getComponentLabel(id: string): string {
+  const c = canvasStore.conveyors[id];
+  if (c) return c.label || `链条 ${id.slice(-4)}`;
+  const t = canvasStore.transferMachines[id];
+  if (t) return t.label || `移载机 ${id.slice(-4)}`;
+  const f = canvasStore.forklifts[id];
+  if (f) return f.label || (f.role === 'generator' ? `发生器 ${id.slice(-4)}` : `消费者 ${id.slice(-4)}`);
+  return '';
 }
 
 function onMouseUp(_e: MouseEvent): void {
@@ -320,9 +350,20 @@ function onKeyDown(e: KeyboardEvent): void {
     }
     canvasManager?.selection.deleteSelected();
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+  // Ctrl+Z 撤销
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
     e.preventDefault();
     if (canvasStore.undo()) {
+      editorStore.deselectAll();
+      canvasManager?.refreshConveyors();
+      canvasManager?.refreshComponents();
+    }
+    return;
+  }
+  // Ctrl+Shift+Z 或 Ctrl+Y 重做
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y' || (e.key === 'Z' && e.shiftKey))) {
+    e.preventDefault();
+    if (canvasStore.redo()) {
       editorStore.deselectAll();
       canvasManager?.refreshConveyors();
       canvasManager?.refreshComponents();
@@ -332,6 +373,14 @@ function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'r' || e.key === 'R') {
     e.preventDefault();
     canvasManager?.selection.rotate90();
+    return;
+  }
+  if (e.key === 's' || e.key === 'S') {
+    // 输入框中不触发
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    e.preventDefault();
+    editorStore.setTool(editorStore.activeTool === 'wire' ? 'select' : 'wire');
     return;
   }
   if (e.key === 'Escape') {
@@ -355,6 +404,11 @@ onMounted(() => {
   // 初始刷新
   canvasManager.refreshConveyors();
   canvasManager.refreshComponents();
+
+  // 自适应视图
+  watch(() => editorStore.fitViewCounter, () => {
+    zoomToFit();
+  });
 
   // 监听 Store 变更 → 刷新画布 + 自动保存草稿
   let draftTimer: ReturnType<typeof setTimeout>;
@@ -401,9 +455,10 @@ onUnmounted(() => {
 <template>
   <div ref="canvasHost" class="canvas-host" @dragover="onDragOver" @drop="onDrop">
     <div class="zoom-controls">
-      <button class="zoom-fit-btn" title="适应视图" @click.stop="zoomToFit">&#9744;</button>
+      <button class="zoom-fit-btn" title="适应视图" @click.stop="zoomToFit"><Maximize2 :size="16" /></button>
       <button class="zoom-pct-btn" title="重置缩放至100%" @click.stop="resetZoom">{{ zoomPercent }}%</button>
     </div>
+    <div v-if="tooltip.visible" class="comp-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">{{ tooltip.text }}</div>
   </div>
 </template>
 
@@ -429,13 +484,15 @@ onUnmounted(() => {
   width: 28px;
   height: 28px;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--color-border);
   background: var(--color-bg-base);
   color: var(--color-fg-primary);
   border-radius: 4px;
   font-size: 16px;
   cursor: pointer;
-  line-height: 26px;
 }
 
 .zoom-fit-btn:hover {
@@ -445,6 +502,8 @@ onUnmounted(() => {
 .zoom-pct-btn {
   height: 28px;
   padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--color-border);
   background: var(--color-bg-base);
   color: var(--color-fg-muted);
@@ -458,5 +517,18 @@ onUnmounted(() => {
 .zoom-pct-btn:hover {
   color: var(--color-fg-primary);
   background: var(--color-border);
+}
+
+.comp-tooltip {
+  position: fixed;
+  z-index: 500;
+  padding: 4px 8px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-primary);
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 </style>

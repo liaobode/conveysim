@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "lucide-vue-next": "^1.0.0",
     "nanoid": "^5.1.11",
     "pinia": "^3.0.4",
     "pixi.js": "^7.4.3",
